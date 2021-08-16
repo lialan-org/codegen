@@ -25,11 +25,9 @@ project(codegen
   LANGUAGES CXX
 )
 
-include(CTest)
-
 option(CODEGEN_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer." ON)
 
-list(APPEND CODEGEN_CXX_FLAGS -Wall -Wextra -Werror -Wno-unused-parameter)
+list(APPEND CODEGEN_CXX_FLAGS -Wall -Wextra -Wno-unused-parameter)
 if (CODEGEN_SANITIZERS)
   list(APPEND CODEGEN_CXX_DEBUG_FLAGS -fsanitize=address -fsanitize=undefined)
 endif()
@@ -60,8 +58,8 @@ target_include_directories(codegen PUBLIC
 target_compile_features(codegen PUBLIC cxx_std_17)
 target_link_libraries(codegen PRIVATE ${CODEGEN_CXX_FLAGS})
 target_compile_options(codegen PRIVATE ${CODEGEN_CXX_FLAGS})
-target_link_libraries(codegen PUBLIC LLVM fmt::fmt ${CODEGEN_CXX_FILESYSTEM})
+target_link_libraries(codegen PUBLIC LLVM LLVMCore fmt::fmt ${CODEGEN_CXX_FILESYSTEM})
 
-if(BUILD_TESTING)
-  add_subdirectory(tests)
-endif()
+
+add_subdirectory(t2)
+

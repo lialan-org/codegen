@@ -48,6 +48,8 @@ module module_builder::build() && {
 
   dbg_builder_.finalize();
 
+  module_->print(llvm::errs(), nullptr);
+
   auto target_triple = compiler_->target_machine_->getTargetTriple();
   module_->setDataLayout(compiler_->data_layout_);
   module_->setTargetTriple(target_triple.str());
