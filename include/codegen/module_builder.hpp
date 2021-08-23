@@ -223,8 +223,10 @@ public:
   friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
 };
 
-template<typename Type, typename = std::enable_if_t<std::is_arithmetic_v<Type>>>
+template<typename Type,
+         typename = std::enable_if_t<std::is_arithmetic_v<Type>>>
 value<Type> constant(Type v) {
+  static_assert(!std::is_const_v(Type));
   return value<Type>{detail::get_constant<Type>(v), [&] {
                        if constexpr (std::is_same_v<Type, bool>) {
                          return v ? "true" : "false";

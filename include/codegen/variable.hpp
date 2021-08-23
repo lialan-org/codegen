@@ -64,6 +64,12 @@ public:
     mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
     mb.ir_builder_.CreateAlignedStore(v.eval(), variable_, detail::type<Type>::alignment);
   }
+
+  // enable for array type
+  template<typename T = Type>
+  value<Type> operator[] {
+
+  }
 };
 
 } // namespace codegen
