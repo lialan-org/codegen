@@ -171,6 +171,20 @@ template<typename Type> struct type<Type*> {
   static std::string name() { return type<std::remove_cv_t<Type>>::name() + '*'; }
 };
 
+// array type
+template<typename Type, size_t N> struct type<Type[N]> {
+  typedef typename std::remove_all_extents<Type>::value ElementType; // grab the underlying type
+  static constexpr size_t alignment = alignof(ElementType);
+
+  static llvm::DIType* dbg() {
+    return current_builder->dbg_builder_.createArrayType(N, alignment * 8, type<ElementType>::llvm::(), {0, N - 1});
+  }
+  static llvm::Type* llvm() {
+    return llvm::ArrayType::get(type<ElementType>::llvm(), N);
+  }
+  static std::string name() { return type<ElementType>::name() + "[" + N + "]"; }
+};
+
 template<typename Type> std::enable_if_t<std::is_arithmetic_v<Type>, llvm::Value*> get_constant(Type v) {
   if constexpr (std::is_integral_v<Type>) {
     return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
@@ -209,7 +223,8 @@ public:
   friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
 };
 
-template<typename Type> value<Type> constant(Type v) {
+template<typename Type, typename = std::enable_if_t<std::is_arithmetic_v<Type>>>
+value<Type> constant(Type v) {
   return value<Type>{detail::get_constant<Type>(v), [&] {
                        if constexpr (std::is_same_v<Type, bool>) {
                          return v ? "true" : "false";
