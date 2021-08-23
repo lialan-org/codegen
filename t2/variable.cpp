@@ -1,12 +1,5 @@
-#include "codegen/variable.hpp"
+#include "codegen/codegen.hpp"
 
-#include "codegen/arithmetic_ops.hpp"
-#include "codegen/compiler.hpp"
-#include "codegen/literals.hpp"
-#include "codegen/module.hpp"
-#include "codegen/module_builder.hpp"
-#include "codegen/relational_ops.hpp"
-#include "codegen/statements.hpp"
 
 int32_t table1[][2] = {{0, 1}, {2, 3}, {4, 5}};
 int32_t table2[][2] = {{2, 9}, {8, 7}, {6, 5}};
@@ -33,7 +26,7 @@ int64_t probe_hashmap(int32_t i) {
     probe_results.push_back(table1_index);
     ++counter;
   }
-  printf("\n   Total found: %d\n", counter);
+  printf("\n   Total found: %ld\n", counter);
   return counter;
 }
 
@@ -49,7 +42,9 @@ void print_probe(int x, int y) {
   printf("    Found join: <%d, %d>\n", x, y);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  INIT_LLVM_ENV(argc, argv);
+
   auto comp = codegen::compiler{};
   auto builder = codegen::module_builder(comp, "hash_join");
 

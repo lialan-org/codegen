@@ -33,6 +33,12 @@
 #include <llvm/ExecutionEngine/Orc/IRTransformLayer.h>
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/ExecutionEngine/Orc/CompileUtils.h>
+
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+
+#include <llvm/IR/LegacyPassManager.h>
 
 #include "utils.hpp"
 
@@ -42,40 +48,103 @@ class compiler {
   llvm::orc::ExecutionSession session_;
 
   llvm::DataLayout data_layout_;
-  std::unique_ptr<llvm::TargetMachine> target_machine_;
+
+  std::unique_ptr<llvm::orc::LLJIT> lljit_;
 
   llvm::orc::MangleAndInterner mangle_;
-
-  llvm::orc::RTDyldObjectLinkingLayer object_layer_;
-  llvm::orc::IRCompileLayer compile_layer_;
-  llvm::orc::IRTransformLayer optimize_layer_;
 
   llvm::JITEventListener* gdb_listener_;
 
   std::filesystem::path source_directory_;
 
-  std::vector<llvm::orc::VModuleKey> loaded_modules_;
-
-  std::unordered_map<std::string, uintptr_t> external_symbols_;
-  llvm::orc::DynamicLibrarySearchGenerator dynlib_generator_;
-
   friend class module_builder;
 
 private:
-  explicit compiler(llvm::orc::JITTargetMachineBuilder);
+  explicit compiler(llvm::orc::JITTargetMachineBuilder tmb)
+    : data_layout_(cantFail(tmb.getDefaultDataLayoutForTarget())),
+      mangle_(session_, data_layout_),
+      gdb_listener_(llvm::JITEventListener::createGDBRegistrationListener()),
+      source_directory_(std::filesystem::temp_directory_path() / ("codegen_" + get_process_name() + ".txt"))
+  {
+    auto jtmb = cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
+    lljit_ = cantFail((llvm::orc::LLJITBuilder()
+                        .setJITTargetMachineBuilder(std::move(jtmb)) 
+                        .setObjectLinkingLayerCreator([&](llvm::orc::ExecutionSession &ES,
+                                                          const llvm::Triple &TT) {
+                            auto GetMemMgr = []() {
+                              return std::make_unique<llvm::SectionMemoryManager>();
+                            };
+                            auto ObjLinkingLayer =
+                              std::make_unique<llvm::orc::RTDyldObjectLinkingLayer>(
+                              ES, std::move(GetMemMgr));
+
+                            // Register the event listener.
+                            ObjLinkingLayer->registerJITEventListener(
+                              *llvm::JITEventListener::createGDBRegistrationListener());
+
+                            // Make sure the debug info sections aren't stripped.
+                            ObjLinkingLayer->setProcessAllSections(true);
+                            return ObjLinkingLayer;})
+                        .create()));
+
+    lljit_->getMainJITDylib().addGenerator(
+        // TODO: should we expose all symbols to JIT?
+        cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+                              data_layout_.getGlobalPrefix(),
+                              [MainName = mangle_("main")](const llvm::orc::SymbolStringPtr &Name) {
+                                return Name != MainName;
+                              })));
+
+    std::filesystem::create_directories(source_directory_);
+  }
 
 public:
-  compiler();
-  ~compiler();
+  compiler()
+    : compiler(cantFail(llvm::orc::JITTargetMachineBuilder::detectHost()))
+    { }
+
+  ~compiler() {
+    std::filesystem::remove_all(source_directory_);
+  }
 
   compiler(compiler const&) = delete;
   compiler(compiler&&) = delete;
 
-  void add_symbol(std::string const& name, void* address);
+  void add_symbol(std::string const& name, void* address) {
+    cantFail(lljit_->getMainJITDylib().define(llvm::orc::absoluteSymbols(
+      {{lljit_->mangleAndIntern(std::move(name)), llvm::JITEvaluatedSymbol::fromPointer(address)}}
+    )));
+  }
+
+  llvm::Error compileModule(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::LLVMContext> context) {
+    return lljit_->addIRModule(llvm::orc::ThreadSafeModule(std::move(module), std::move(context)));
+  }
 
 private:
-  llvm::Expected<llvm::orc::ThreadSafeModule> optimize_module(llvm::orc::ThreadSafeModule,
-                                                              llvm::orc::MaterializationResponsibility const&);
+  llvm::Expected<llvm::orc::ThreadSafeModule>
+  inline static optimize_module(llvm::orc::ThreadSafeModule TSM, llvm::orc::MaterializationResponsibility const &R) {
+    TSM.withModuleDo([](llvm::Module &M) {
+      // Create a function pass manager.
+      auto FPM = std::make_unique<llvm::legacy::FunctionPassManager>(&M);
+
+      // Add some optimizations.
+      //FPM->add(createInstructionCombiningPass());
+      //FPM->add(createReassociatePass());
+      //FPM->add(createGVNPass());
+      //FPM->add(createCFGSimplificationPass());
+      FPM->doInitialization();
+
+      // Run the optimizations over all functions in the module being added to
+      // the JIT.
+      for (auto &F : M) {
+        FPM->run(F);
+      }
+
+      FPM->doFinalization();
+    });
+
+    return std::move(TSM);
+  }
 };
 
 } // namespace codegen

@@ -27,14 +27,19 @@ namespace codegen {
 template<typename ReturnType, typename... Arguments> class function_ref;
 
 class module {
-  llvm::orc::ExecutionSession* session_;
-
+  std::unique_ptr<llvm::orc::LLJIT> lljit_;
   llvm::orc::MangleAndInterner mangle_;
 
 private:
-  module(llvm::orc::ExecutionSession&, llvm::DataLayout const&);
+  module(std::unique_ptr<llvm::orc::LLJIT> lljit, llvm::orc::MangleAndInterner const &mangle)
+    : lljit_(std::move(lljit)),
+      mangle_(std::move(mangle))
+  { }
 
-  void* get_address(std::string const&);
+  //void* get_address(std::string const& name) {
+  //  auto entry_pointer = cantFail(lljit_->lookup(name));
+  //  return llvm::jitTargetAddressToFunction<void*>(entry_pointer.getAddress());
+  //}
 
   friend class module_builder;
 
@@ -44,7 +49,8 @@ public:
 
   template<typename ReturnType, typename... Arguments>
   auto get_address(function_ref<ReturnType, Arguments...> const& fn) {
-    return reinterpret_cast<ReturnType (*)(Arguments...)>(get_address(fn.name()));
+    auto entry_pointer = cantFail(lljit_->lookup(fn.name()));
+    return llvm::jitTargetAddressToFunction<ReturnType (*)(Arguments...)>(entry_pointer.getAddress());
   }
 };
 

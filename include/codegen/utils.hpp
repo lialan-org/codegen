@@ -27,6 +27,8 @@
 #include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include "os.hpp"
+
 namespace codegen {
 
 namespace detail {
@@ -49,11 +51,6 @@ public:
 
 inline void throw_on_error(llvm::Error err) {
   if (err) { throw llvm_error(std::move(err)); }
-}
-
-template<typename T> T unwrap(llvm::Expected<T> value) {
-  if (!value) { throw llvm_error(value.takeError()); }
-  return std::move(*value);
 }
 
 } // namespace codegen

@@ -24,27 +24,22 @@
 
 #include "codegen/module_builder.hpp"
 
+#include "types.hpp"
+
 namespace codegen::builtin {
 
-template<typename Destination, typename Source, typename Size> void memcpy(Destination dst, Source src, Size n) {
-  static_assert(std::is_pointer_v<typename Destination::value_type>);
-  static_assert(std::is_pointer_v<typename Source::value_type>);
-  static_assert(std::is_same_v<typename Size::value_type, int32_t> ||
-                std::is_same_v<typename Size::value_type, int64_t>);
 
+void memcpy(codegen::Pointer auto dst, codegen::Pointer auto src, codegen::Size auto n) {
   using namespace detail;
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcpy({}, {}, {});", dst, src, n));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
-  mb.ir_builder_.CreateMemCpy(dst.eval(), detail::type<typename Destination::value_type>::alignment, src.eval(),
-                              detail::type<typename Source::value_type>::alignment, n.eval());
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.CreateMemCpy(dst.eval(), detail::type<typename decltype(dst)::value_type>::alignment, src.eval(),
+                              detail::type<typename decltype(src)::value_type>::alignment, n.eval());
 }
 
-template<typename Source1, typename Source2, typename Size> value<int> memcmp(Source1 src1, Source2 src2, Size n) {
-  static_assert(std::is_pointer_v<typename Source1::value_type>);
-  static_assert(std::is_pointer_v<typename Source2::value_type>);
-
+value<int> memcmp(codegen::Pointer auto src1, codegen::Pointer auto src2, codegen::Size auto n) {
   using namespace detail;
   auto& mb = *detail::current_builder;
 
@@ -54,13 +49,14 @@ template<typename Source1, typename Source2, typename Size> value<int> memcmp(So
       llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, "memcmp", mb.module_.get());
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcmp_ret = memcmp({}, {}, {});", src1, src2, n));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
   return value<int>{mb.ir_builder_.CreateCall(fn, {src1.eval(), src2.eval(), n.eval()}), "memcmp_ret"};
 }
 
 namespace detail {
 
-template<typename Value> class bswap_impl {
+template<typename Value>
+class bswap_impl {
   Value value_;
 
 public:
@@ -78,7 +74,8 @@ public:
 
 } // namespace detail
 
-template<typename Value> auto bswap(Value v) {
+template<typename Value>
+auto bswap(Value v) {
   return detail::bswap_impl<Value>(v);
 }
 

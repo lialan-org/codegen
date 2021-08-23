@@ -22,18 +22,19 @@
 
 #pragma once
 
-#include "codegen/module_builder.hpp"
-#include "codegen/utils.hpp"
+#include "module_builder.hpp"
+#include "types.hpp"
+#include "utils.hpp"
 
 namespace codegen {
 
-template<typename Condition, typename TrueBlock, typename FalseBlock,
+template<ConditionType Condition, typename TrueBlock, typename FalseBlock,
          typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
-void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
+inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
 
   auto true_block = llvm::BasicBlock::Create(*mb.context_, "true_block", mb.function_);
   auto false_block = llvm::BasicBlock::Create(*mb.context_, "false_block");
@@ -54,7 +55,7 @@ void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   line_no = mb.source_code_.add_line("} else {");
 
   if (!mb.exited_block_) {
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, parent_scope));
+    mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, parent_scope));
     mb.ir_builder_.CreateBr(merge_block);
   }
   mb.exited_block_ = false;
@@ -73,7 +74,7 @@ void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   line_no = mb.source_code_.add_line("}");
 
   if (!mb.exited_block_) {
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+    mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
     mb.ir_builder_.CreateBr(merge_block);
   }
   mb.exited_block_ = false;
@@ -84,11 +85,11 @@ void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
 
 template<typename Condition, typename TrueBlock,
          typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
-void if_(Condition&& cnd, TrueBlock&& tb) {
+inline void if_(Condition&& cnd, TrueBlock&& tb) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
 
   auto true_block = llvm::BasicBlock::Create(*mb.context_, "true_block", mb.function_);
   auto merge_block = llvm::BasicBlock::Create(*mb.context_, "merge_block");
@@ -110,7 +111,7 @@ void if_(Condition&& cnd, TrueBlock&& tb) {
   line_no = mb.source_code_.add_line("}");
 
   if (!mb.exited_block_) {
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+    mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
     mb.ir_builder_.CreateBr(merge_block);
   }
   mb.exited_block_ = false;
@@ -120,18 +121,19 @@ void if_(Condition&& cnd, TrueBlock&& tb) {
 }
 
 template<typename ReturnType, typename... Arguments, typename... Values>
-value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&&... args) {
+inline value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&&... args) {
   static_assert((std::is_same_v<Arguments, typename std::decay_t<Values>::value_type> && ...));
 
   auto& mb = *detail::current_builder;
 
-  auto str = std::stringstream{};
-  str << fn.name() << "_ret = " << fn.name() << "(";
-  (void)(str << ... << fmt::format("{}, ", args));
-  str << ");";
-  auto line_no = mb.source_code_.add_line(str.str());
-
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  {
+    auto str = std::stringstream{};
+    str << fn.name() << "_ret = " << fn.name() << "(";
+    (void)(str << ... << fmt::format("{}, ", args));
+    str << ");";
+    auto line_no = mb.source_code_.add_line(str.str());
+    mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+  }
 
   auto values = std::vector<llvm::Value*>{};
   [[maybe_unused]] auto _ = {0, ((values.emplace_back(args.eval())), 0)...};
@@ -141,20 +143,20 @@ value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&
 }
 
 template<typename Pointer, typename = std::enable_if_t<std::is_pointer_v<typename std::decay_t<Pointer>::value_type>>>
-auto load(Pointer ptr) {
+inline auto load(Pointer ptr) {
   using value_type = std::remove_cv_t<std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>>;
   auto& mb = *detail::current_builder;
 
   auto id = fmt::format("val{}", detail::id_counter++);
 
   auto line_no = mb.source_code_.add_line(fmt::format("{} = *{}", id, ptr));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
-  auto v = mb.ir_builder_.CreateAlignedLoad(ptr.eval(), detail::type<value_type>::alignment);
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+  auto v = mb.ir_builder_.CreateAlignedLoad(ptr.eval(), llvm::MaybeAlign(detail::type<value_type>::alignment));
 
   auto dbg_value =
       mb.dbg_builder_.createAutoVariable(mb.dbg_scope_, id, mb.dbg_file_, line_no, detail::type<value_type>::dbg());
   mb.dbg_builder_.insertDbgValueIntrinsic(v, dbg_value, mb.dbg_builder_.createExpression(),
-                                          llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_),
+                                          llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_),
                                           mb.ir_builder_.GetInsertBlock());
 
   return value<value_type>{v, id};
@@ -166,22 +168,22 @@ template<
                                 !std::is_const_v<std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>> &&
                                 std::is_same_v<typename std::decay_t<Value>::value_type,
                                                std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>>>>
-void store(Value v, Pointer ptr) {
+inline void store(Value v, Pointer ptr) {
   using value_type = std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>;
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("*{} = {}", ptr, v));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
-  mb.ir_builder_.CreateAlignedStore(v.eval(), ptr.eval(), detail::type<value_type>::alignment);
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.CreateAlignedStore(v.eval(), ptr.eval(), llvm::MaybeAlign(detail::type<value_type>::alignment));
 }
 
 template<typename ConditionFn, typename Body,
          typename = std::enable_if_t<std::is_same_v<typename std::invoke_result_t<ConditionFn>::value_type, bool>>>
-void while_(ConditionFn cnd_fn, Body bdy) {
+inline void while_(ConditionFn cnd_fn, Body bdy) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.current_line() + 1;
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
   auto cnd = cnd_fn();
   mb.source_code_.add_line(fmt::format("while ({}) {{", cnd));
 
@@ -213,7 +215,7 @@ void while_(ConditionFn cnd_fn, Body bdy) {
   line_no = mb.source_code_.add_line("}");
 
   if (!mb.exited_block_) {
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+    mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
     mb.ir_builder_.CreateBr(while_continue);
   }
   mb.exited_block_ = false;
@@ -224,7 +226,53 @@ void while_(ConditionFn cnd_fn, Body bdy) {
   mb.current_loop_ = parent_loop;
 }
 
-void break_();
-void continue_();
+inline void break_() {
+  auto& mb = *detail::current_builder;
+  assert(mb.current_loop_.break_block_);
+
+  mb.exited_block_ = true;
+
+  auto line_no = mb.source_code_.add_line("break;");
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+
+  mb.ir_builder_.CreateBr(mb.current_loop_.break_block_);
+}
+
+inline void continue_() {
+  auto& mb = *detail::current_builder;
+  assert(mb.current_loop_.continue_block_);
+
+  mb.exited_block_ = true;
+
+  auto line_no = mb.source_code_.add_line("continue;");
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+
+  mb.ir_builder_.CreateBr(mb.current_loop_.continue_block_);
+}
+
+inline value<bool> true_() {
+  return constant(true);
+}
+
+inline value<bool> false_() {
+  return constant(false);
+}
+
+inline void return_() {
+  auto& mb = *detail::current_builder;
+  auto line_no = mb.source_code_.add_line("return;");
+  mb.exited_block_ = true;
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.CreateRetVoid();
+}
+
+template<typename Value>
+inline void return_(Value v) {
+  auto& mb = *detail::current_builder;
+  mb.exited_block_ = true;
+  auto line_no = mb.source_code_.add_line(fmt::format("return {};", v));
+  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.CreateRet(v.eval());
+}
 
 } // namespace codegen
