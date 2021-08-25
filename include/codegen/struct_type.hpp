@@ -1,5 +1,19 @@
 
-#include <tuple>
+#include <vector>
+
+
+namespace codegen::detail {
+  template<typename FirstType, typename ... OtherTypes>
+  void getTypeArray(std::vector<int> &type_vec) {
+
+  }
+
+
+  template<typename Type>
+  void getTypeArray(std::vector<int> &type_vec) {
+
+  }
+}
 
 namespace codegen {
 
@@ -16,11 +30,13 @@ namespace codegen {
 template<typename... Args>
 class Struct {
 public:
-  using TupleType = std::tuple<Args...>;
   //static constexpr std::size_t size = sizeof...(Args);
 
-  Struct(Args... values) {
-    fields_ = std::tuple<Args...>(values...);
+  Struct() {}
+
+  static void declare_type() {
+    std::vector<int> type_vec;
+    ::codegen::detail::getTypeArray<Args...>(type_vec);
   }
 
   //template<typename Y>
@@ -34,7 +50,6 @@ public:
   //
   // dbg()
 private:
-  TupleType fields_;
 };
 
 } // namespace codegen
