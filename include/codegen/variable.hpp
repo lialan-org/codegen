@@ -65,11 +65,6 @@ public:
     mb.ir_builder_.CreateAlignedStore(v.eval(), variable_, detail::type<Type>::alignment);
   }
 
-  // enable for array type
-  template<typename T = Type>
-  value<Type> operator[] {
-
-  }
 };
 
 } // namespace codegen

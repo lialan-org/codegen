@@ -177,7 +177,7 @@ template<typename Type, size_t N> struct type<Type[N]> {
   static constexpr size_t alignment = alignof(ElementType);
 
   static llvm::DIType* dbg() {
-    return current_builder->dbg_builder_.createArrayType(N, alignment * 8, type<ElementType>::llvm::(), {0, N - 1});
+    return current_builder->dbg_builder_.createArrayType(N, alignment * 8, type<ElementType>::llvm(), {0, N - 1});
   }
   static llvm::Type* llvm() {
     return llvm::ArrayType::get(type<ElementType>::llvm(), N);
@@ -226,7 +226,7 @@ public:
 template<typename Type,
          typename = std::enable_if_t<std::is_arithmetic_v<Type>>>
 value<Type> constant(Type v) {
-  static_assert(!std::is_const_v(Type));
+  static_assert(!std::is_const_v<Type>);
   return value<Type>{detail::get_constant<Type>(v), [&] {
                        if constexpr (std::is_same_v<Type, bool>) {
                          return v ? "true" : "false";
