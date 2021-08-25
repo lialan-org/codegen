@@ -1,17 +1,22 @@
-
 #include <vector>
 
-
 namespace codegen::detail {
-  template<typename FirstType, typename ... OtherTypes>
-  void getTypeArray(std::vector<int> &type_vec) {
-
-  }
-
 
   template<typename Type>
-  void getTypeArray(std::vector<int> &type_vec) {
+  void getTypeArrayEnd(std::vector<int> &type_vec) {
+    printf("single typename get\n");
+    type_vec.push_back(0);
+  }
 
+  template<typename FirstType, typename ... OtherTypes>
+  void getTypeArray(std::vector<int> &type_vec) {
+    printf("multiple typename get\n");
+    type_vec.push_back(1);
+    if constexpr (sizeof...(OtherTypes) == 1) {
+      getTypeArrayEnd<OtherTypes...>(type_vec);
+    } else {
+      getTypeArray<OtherTypes...>(type_vec);
+    }
   }
 }
 
@@ -30,19 +35,16 @@ namespace codegen {
 template<typename... Args>
 class Struct {
 public:
-  //static constexpr std::size_t size = sizeof...(Args);
+  static_assert(sizeof...(Args) > 0);
 
   Struct() {}
 
   static void declare_type() {
     std::vector<int> type_vec;
     ::codegen::detail::getTypeArray<Args...>(type_vec);
+
+    printf("arg size: %lu\n", type_vec.size());
   }
-
-  //template<typename Y>
-  //value<Y> field(TupleType t) {
-
-  //}
 
   // declare()
   // 
@@ -53,3 +55,10 @@ private:
 };
 
 } // namespace codegen
+
+/*
+int main() {
+  codegen::Struct<int, int, float>::declare_type();
+  codegen::Struct<float, int>::declare_type();
+}
+*/
