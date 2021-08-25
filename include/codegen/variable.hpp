@@ -65,6 +65,11 @@ public:
     mb.ir_builder_.CreateAlignedStore(v.eval(), variable_, detail::type<Type>::alignment);
   }
 
+  // TODO
+  // address-of operator gets you the pointer to the variable.
+  //Type *operator&() { }
+
+
 };
 
 } // namespace codegen
