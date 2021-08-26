@@ -69,7 +69,6 @@ public:
   // address-of operator gets you the pointer to the variable.
   //Type *operator&() { }
 
-  // rvalue
   template<typename T = Type, typename Value>
   typename std::enable_if_t<std::is_array_v<T> &&
                             std::is_integral_v<typename Value::value_type>,
@@ -92,6 +91,7 @@ public:
   }
 
   // lvalue
+  /*
   template<typename T = Type, typename Value>
   typename std::enable_if_t<std::is_array_v<T> &&
                             std::is_integral_v<typename Value::value_type>,
@@ -114,6 +114,7 @@ public:
     std::string value_name = fmt::format("{}[{}]", name_, idx.name_);
     return value<std::remove_all_extents_t<T>>{elem, value_name};
   }
+  */
 
 
 };
