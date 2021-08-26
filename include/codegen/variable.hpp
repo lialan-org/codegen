@@ -73,18 +73,46 @@ public:
   template<typename T = Type, typename Value>
   typename std::enable_if_t<std::is_array_v<T> &&
                             std::is_integral_v<typename Value::value_type>,
-	    std::remove_all_extents_t<T>>
-  operator[](Value const& v) && {
-    // TODO 
+	    value<std::remove_all_extents_t<T>>>
+  operator[](Value const& v) & {
+    auto& mb = *detail::current_builder;
+
+    auto idx = v.eval();
+
+    if constexpr (sizeof(typename Value::value_type) < sizeof(uint64_t)) {
+      if constexpr (std::is_unsigned_v<Value::value_type>) {
+        idx = mb.ir_builder_.CreateZExt(idx, detail::type<uint64_t>::llvm());
+      } else {
+        idx = mb.ir_builder_.CreateSExt(idx, detail::type<int64_t>::llvm());
+      }
+    }
+
+    auto elem = mb.ir_builder_.CreateInBoundsGEP(variable_, idx);
+    return value<std::remove_all_extents_t<T>>{elem, name_};
   }
 
   // lvalue
   template<typename T = Type, typename Value>
   typename std::enable_if_t<std::is_array_v<T> &&
                             std::is_integral_v<typename Value::value_type>,
-	    std::remove_all_extents_t<T>>
-  operator[](Value const& v) & {
-    // TODO 
+	    value<std::remove_all_extents_t<T>>>
+  operator[](Value const& v) && {
+    //static_assert(sizeof(Value::value_type) < sizeof(int64_t));
+    auto& mb = *detail::current_builder;
+
+    auto idx = v.eval();
+
+    if constexpr (sizeof(typename Value::value_type) < sizeof(uint64_t)) {
+      if constexpr (std::is_unsigned_v<Value::value_type>) {
+        idx = mb.ir_builder_.CreateZExt(idx, detail::type<uint64_t>::llvm());
+      } else {
+        idx = mb.ir_builder_.CreateSExt(idx, detail::type<int64_t>::llvm());
+      }
+    }
+
+    auto elem = mb.ir_builder_.CreateInBoundsGEP(variable_, idx);
+    std::string value_name = fmt::format("{}[{}]", name_, idx.name_);
+    return value<std::remove_all_extents_t<T>>{elem, value_name};
   }
 
 
