@@ -1,26 +1,26 @@
+#pragma once
+
+#include "codegen/module_builder.hpp"
 #include <vector>
 
-namespace codegen::detail {
+namespace codegen {
 
-  template<typename Type>
-  void getTypeArrayEnd(std::vector<int> &type_vec) {
-    printf("single typename get\n");
-    type_vec.push_back(0);
+namespace detail {
+  template<typename T>
+  llvm::Type* getType() {
+    return type<T>::llvm();
   }
 
   template<typename FirstType, typename ... OtherTypes>
-  void getTypeArray(std::vector<int> &type_vec) {
-    printf("multiple typename get\n");
-    type_vec.push_back(1);
+  void getTypeArray(std::vector<llvm::Type*> &type_vec) {
+    type_vec.push_back(getType<FirstType>());
     if constexpr (sizeof...(OtherTypes) == 1) {
-      getTypeArrayEnd<OtherTypes...>(type_vec);
+      type_vec.push_back(getType<OtherTypes...>());
     } else {
       getTypeArray<OtherTypes...>(type_vec);
     }
   }
 }
-
-namespace codegen {
 
 // Supposely, this would work like this:
 // Declare:
@@ -39,11 +39,15 @@ public:
 
   Struct() {}
 
-  static void declare_type() {
-    std::vector<int> type_vec;
+  static llvm::Type* llvm(std::string name = "struct_type") {
+    std::vector<llvm::Type*> type_vec;
     ::codegen::detail::getTypeArray<Args...>(type_vec);
 
-    printf("arg size: %lu\n", type_vec.size());
+    auto& mb = *detail::current_builder;
+
+    llvm::StructType* const struct_type = llvm::StructType::create(*mb.context_, name);
+    struct_type->setBody(type_vec);
+    return struct_type;
   }
 
   // declare()
@@ -53,6 +57,19 @@ public:
   // dbg()
 private:
 };
+
+namespace detail {
+  template<typename... Args>
+  struct type<codegen::Struct<Args...>> {
+    using struct_type = codegen::Struct<Args...>;
+    static constexpr size_t alignment = alignof(int);
+    static llvm::DIType* dbg() {
+      return current_builder->dbg_builder_.createPointerType(type<int*>::dbg(), sizeof(int*) * 8);
+    }
+    static llvm::Type* llvm() { return Struct<Args...>::llvm(); }
+    static std::string name() { return "StructType"; }
+  };
+}
 
 } // namespace codegen
 
