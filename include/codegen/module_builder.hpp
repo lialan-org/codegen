@@ -173,16 +173,16 @@ template<typename Type> struct type<Type*> {
 
 // array type
 template<typename Type, size_t N> struct type<Type[N]> {
-  typedef typename std::remove_all_extents<Type>::value ElementType; // grab the underlying type
-  static constexpr size_t alignment = alignof(ElementType);
+  using ElementType = typename std::remove_all_extents<Type>::value; // grab the underlying type
+  static constexpr size_t alignment = alignof(Type);
 
   static llvm::DIType* dbg() {
-    return current_builder->dbg_builder_.createArrayType(N, alignment * 8, type<ElementType>::llvm(), {0, N - 1});
+    return current_builder->dbg_builder_.createArrayType(N, alignment * 8, type<Type>::llvm(), {0, N - 1});
   }
   static llvm::Type* llvm() {
-    return llvm::ArrayType::get(type<ElementType>::llvm(), N);
+    return llvm::ArrayType::get(type<Type>::llvm(), N);
   }
-  static std::string name() { return type<ElementType>::name() + "[" + N + "]"; }
+  static std::string name() { return type<Type>::name() + "[" + N + "]"; }
 };
 
 template<typename Type> std::enable_if_t<std::is_arithmetic_v<Type>, llvm::Value*> get_constant(Type v) {

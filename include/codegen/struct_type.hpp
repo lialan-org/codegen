@@ -62,9 +62,9 @@ namespace detail {
   template<typename... Args>
   struct type<codegen::Struct<Args...>> {
     using struct_type = codegen::Struct<Args...>;
-    static constexpr size_t alignment = alignof(int);
+    static constexpr size_t alignment = alignof(codegen::Struct<Args...>);
     static llvm::DIType* dbg() {
-      return current_builder->dbg_builder_.createPointerType(type<int*>::dbg(), sizeof(int*) * 8);
+      return current_builder->dbg_builder_.createPointerType(type<int*>::dbg(), sizeof(codegen::Struct<Args...>) * 8);
     }
     static llvm::Type* llvm() { return Struct<Args...>::llvm(); }
     static std::string name() { return "StructType"; }
