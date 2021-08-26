@@ -69,12 +69,21 @@ public:
   // address-of operator gets you the pointer to the variable.
   //Type *operator&() { }
 
-  // get rvalue of the array element
-  template<typename AType = Type, typename Value>
-  typename std::enable_if_t<std::is_array_v<AType> &&
+  // rvalue
+  template<typename T = Type, typename Value>
+  typename std::enable_if_t<std::is_array_v<T> &&
                             std::is_integral_v<typename Value::value_type>,
-	    std::remove_all_extents_t<AType>>
-  operator[](Value const& v) {
+	    std::remove_all_extents_t<T>>
+  operator[](Value const& v) && {
+    // TODO 
+  }
+
+  // lvalue
+  template<typename T = Type, typename Value>
+  typename std::enable_if_t<std::is_array_v<T> &&
+                            std::is_integral_v<typename Value::value_type>,
+	    std::remove_all_extents_t<T>>
+  operator[](Value const& v) & {
     // TODO 
   }
 
