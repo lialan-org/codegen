@@ -54,13 +54,13 @@ module module_builder::build() && {
   module_->setDataLayout(compiler_->data_layout_);
   module_->setTargetTriple(target_triple.str());
 
-  throw_on_error(compiler_->optimize_layer_.add(compiler_->session_.getMainJITDylib(),
-                                                llvm::orc::ThreadSafeModule(std::move(module_), std::move(context_))));
+  //throw_on_error(compiler_->optimize_layer_.add(compiler_->session_.getMainJITDylib(),
+  //                                              llvm::orc::ThreadSafeModule(std::move(module_), std::move(context_))));
   return module{compiler_->session_, compiler_->data_layout_};
 }
 
 void module_builder::set_function_attributes(llvm::Function* fn) {
-  fn->addFnAttr("target-cpu", llvm::sys::getHostCPUName());
+  //fn->addFnAttr("target-cpu", llvm::sys::getHostCPUName());
 }
 
 unsigned module_builder::source_code_generator::add_line(std::string const& line) {
@@ -93,7 +93,7 @@ void return_() {
   auto& mb = *detail::current_builder;
   auto line_no = mb.source_code_.add_line("return;");
   mb.exited_block_ = true;
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
   mb.ir_builder_.CreateRetVoid();
 }
 

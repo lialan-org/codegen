@@ -33,7 +33,7 @@ void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
 
   auto true_block = llvm::BasicBlock::Create(*mb.context_, "true_block", mb.function_);
   auto false_block = llvm::BasicBlock::Create(*mb.context_, "false_block");
@@ -54,7 +54,7 @@ void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   line_no = mb.source_code_.add_line("} else {");
 
   if (!mb.exited_block_) {
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, parent_scope));
+    //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, parent_scope));
     mb.ir_builder_.CreateBr(merge_block);
   }
   mb.exited_block_ = false;
@@ -73,7 +73,7 @@ void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   line_no = mb.source_code_.add_line("}");
 
   if (!mb.exited_block_) {
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+    //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
     mb.ir_builder_.CreateBr(merge_block);
   }
   mb.exited_block_ = false;
@@ -88,7 +88,7 @@ void if_(Condition&& cnd, TrueBlock&& tb) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
 
   auto true_block = llvm::BasicBlock::Create(*mb.context_, "true_block", mb.function_);
   auto merge_block = llvm::BasicBlock::Create(*mb.context_, "merge_block");
@@ -110,7 +110,7 @@ void if_(Condition&& cnd, TrueBlock&& tb) {
   line_no = mb.source_code_.add_line("}");
 
   if (!mb.exited_block_) {
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+    //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
     mb.ir_builder_.CreateBr(merge_block);
   }
   mb.exited_block_ = false;
@@ -131,13 +131,13 @@ value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&
   str << ");";
   auto line_no = mb.source_code_.add_line(str.str());
 
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
 
   auto values = std::vector<llvm::Value*>{};
   [[maybe_unused]] auto _ = {0, ((values.emplace_back(args.eval())), 0)...};
 
-  auto ret = mb.ir_builder_.CreateCall(fn, values);
-  return value<ReturnType>{ret, fmt::format("{}_ret", fn.name())};
+  //auto ret = mb.ir_builder_.CreateCall(fn, values);
+  //return value<ReturnType>{ret, fmt::format("{}_ret", fn.name())};
 }
 
 template<typename Pointer, typename = std::enable_if_t<std::is_pointer_v<typename std::decay_t<Pointer>::value_type>>>
@@ -148,14 +148,14 @@ auto load(Pointer ptr) {
   auto id = fmt::format("val{}", detail::id_counter++);
 
   auto line_no = mb.source_code_.add_line(fmt::format("{} = *{}", id, ptr));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
   auto v = mb.ir_builder_.CreateAlignedLoad(ptr.eval(), detail::type<value_type>::alignment);
 
   auto dbg_value =
       mb.dbg_builder_.createAutoVariable(mb.dbg_scope_, id, mb.dbg_file_, line_no, detail::type<value_type>::dbg());
-  mb.dbg_builder_.insertDbgValueIntrinsic(v, dbg_value, mb.dbg_builder_.createExpression(),
-                                          llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_),
-                                          mb.ir_builder_.GetInsertBlock());
+  //mb.dbg_builder_.insertDbgValueIntrinsic(v, dbg_value, mb.dbg_builder_.createExpression(),
+  //                                        llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_),
+  //                                        mb.ir_builder_.GetInsertBlock());
 
   return value<value_type>{v, id};
 }
@@ -171,7 +171,7 @@ void store(Value v, Pointer ptr) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("*{} = {}", ptr, v));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
   mb.ir_builder_.CreateAlignedStore(v.eval(), ptr.eval(), detail::type<value_type>::alignment);
 }
 
@@ -181,7 +181,7 @@ void while_(ConditionFn cnd_fn, Body bdy) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.current_line() + 1;
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
   auto cnd = cnd_fn();
   mb.source_code_.add_line(fmt::format("while ({}) {{", cnd));
 
@@ -213,7 +213,7 @@ void while_(ConditionFn cnd_fn, Body bdy) {
   line_no = mb.source_code_.add_line("}");
 
   if (!mb.exited_block_) {
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+    //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
     mb.ir_builder_.CreateBr(while_continue);
   }
   mb.exited_block_ = false;

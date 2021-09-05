@@ -45,12 +45,12 @@ namespace codegen {
 
 compiler::compiler(llvm::orc::JITTargetMachineBuilder tmb)
     : data_layout_(unwrap(tmb.getDefaultDataLayoutForTarget())), target_machine_(unwrap(tmb.createTargetMachine())),
-      mangle_(session_, data_layout_), object_layer_(
+      mangle_(session_, data_layout_)/*, object_layer_(
                                            session_, [] { return std::make_unique<llvm::SectionMemoryManager>(); },
                                            [this](llvm::orc::VModuleKey vk, llvm::object::ObjectFile const& object,
                                                   llvm::RuntimeDyld::LoadedObjectInfo const& info) {
                                              if (gdb_listener_) { gdb_listener_->notifyObjectLoaded(vk, object, info); }
-                                             loaded_modules_.emplace_back(vk);
+                                             //loaded_modules_.emplace_back(vk);
                                            }),
       compile_layer_(session_, object_layer_, llvm::orc::ConcurrentIRCompiler(std::move(tmb))),
       optimize_layer_(session_, compile_layer_,
@@ -62,7 +62,8 @@ compiler::compiler(llvm::orc::JITTargetMachineBuilder tmb)
         auto dist = std::uniform_int_distribution<uint64_t>{};
         return std::filesystem::temp_directory_path() / (get_process_name() + "-" + std::to_string(dist(eng)));
       }()),
-      dynlib_generator_(unwrap(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(data_layout_))) {
+      dynlib_generator_(unwrap(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(data_layout_)))*/ {
+        /*
   session_.getMainJITDylib().setGenerator([this](llvm::orc::JITDylib& jd,
                                                  llvm::orc::SymbolNameSet const& Names) -> llvm::orc::SymbolNameSet {
     auto added = llvm::orc::SymbolNameSet{};
@@ -85,6 +86,7 @@ compiler::compiler(llvm::orc::JITTargetMachineBuilder tmb)
     }
     return added;
   });
+  */
 
   std::filesystem::create_directories(source_directory_);
 } // namespace codegen
@@ -96,18 +98,19 @@ compiler::compiler()
 
         auto tmb = unwrap(llvm::orc::JITTargetMachineBuilder::detectHost());
         tmb.setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive);
-        tmb.setCPU(llvm::sys::getHostCPUName());
+        //tmb.setCPU(llvm::sys::getHostCPUName());
         return tmb;
       }()) {
 }
 
 compiler::~compiler() {
-  for (auto vk : loaded_modules_) { gdb_listener_->notifyFreeingObject(vk); }
+  //for (auto vk : loaded_modules_) { gdb_listener_->notifyFreeingObject(vk); }
   std::filesystem::remove_all(source_directory_);
 }
 
 llvm::Expected<llvm::orc::ThreadSafeModule> compiler::optimize_module(llvm::orc::ThreadSafeModule tsm,
                                                                       llvm::orc::MaterializationResponsibility const&) {
+  /*
   auto module = tsm.getModule();
 
   auto target_triple = target_machine_->getTargetTriple();
@@ -143,10 +146,11 @@ llvm::Expected<llvm::orc::ThreadSafeModule> compiler::optimize_module(llvm::orc:
   module_passes.run(*module);
 
   return tsm;
+  */
 }
 
 void compiler::add_symbol(std::string const& name, void* address) {
-  external_symbols_[*mangle_(name)] = reinterpret_cast<uintptr_t>(address);
+  //external_symbols_[*mangle_(name)] = reinterpret_cast<uintptr_t>(address);
 }
 
 module::module(llvm::orc::ExecutionSession& session, llvm::DataLayout const& dl)
@@ -154,8 +158,8 @@ module::module(llvm::orc::ExecutionSession& session, llvm::DataLayout const& dl)
 }
 
 void* module::get_address(std::string const& name) {
-  auto address = unwrap(session_->lookup({&session_->getMainJITDylib()}, mangle_(name))).getAddress();
-  return reinterpret_cast<void*>(address);
+  //auto address = unwrap(session_->lookup({&session_->getMainJITDylib()}, mangle_(name))).getAddress();
+  //return reinterpret_cast<void*>(address);
 }
 
 } // namespace codegen

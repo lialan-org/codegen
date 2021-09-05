@@ -324,7 +324,7 @@ template<typename Value> void return_(Value v) {
   auto& mb = *detail::current_builder;
   mb.exited_block_ = true;
   auto line_no = mb.source_code_.add_line(fmt::format("return {};", v));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
   mb.ir_builder_.CreateRet(v.eval());
 }
 
@@ -342,9 +342,10 @@ template<typename ReturnType, typename... Arguments> class function_builder<Retu
 
     auto dbg_arg = mb.dbg_builder_.createParameterVariable(mb.dbg_scope_, name, idx + 1, mb.dbg_file_,
                                                            mb.source_code_.current_line(), type<Argument>::dbg());
-    mb.dbg_builder_.insertDbgValueIntrinsic(&*(args + idx), dbg_arg, mb.dbg_builder_.createExpression(),
-                                            llvm::DebugLoc::get(mb.source_code_.current_line(), 1, mb.dbg_scope_),
-                                            mb.ir_builder_.GetInsertBlock());
+                                                           
+    //mb.dbg_builder_.insertDbgValueIntrinsic(&*(args + idx), dbg_arg, mb.dbg_builder_.createExpression(),
+    //                                        llvm::DebugLoc::get(mb.source_code_.current_line(), 1, mb.dbg_scope_),
+    //                                        mb.ir_builder_.GetInsertBlock());
   }
 
   template<size_t... Idx, typename FunctionBuilder>

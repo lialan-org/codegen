@@ -46,18 +46,18 @@ class compiler {
 
   llvm::orc::MangleAndInterner mangle_;
 
-  llvm::orc::RTDyldObjectLinkingLayer object_layer_;
-  llvm::orc::IRCompileLayer compile_layer_;
-  llvm::orc::IRTransformLayer optimize_layer_;
+  //llvm::orc::RTDyldObjectLinkingLayer object_layer_;
+  //llvm::orc::IRCompileLayer compile_layer_;
+  //llvm::orc::IRTransformLayer optimize_layer_;
 
-  llvm::JITEventListener* gdb_listener_;
+  //llvm::JITEventListener* gdb_listener_;
 
   std::filesystem::path source_directory_;
 
-  std::vector<llvm::orc::VModuleKey> loaded_modules_;
+  //std::vector<llvm::orc::VModuleKey> loaded_modules_;
 
   std::unordered_map<std::string, uintptr_t> external_symbols_;
-  llvm::orc::DynamicLibrarySearchGenerator dynlib_generator_;
+  //llvm::orc::DynamicLibrarySearchGenerator dynlib_generator_;
 
   friend class module_builder;
 

@@ -43,8 +43,8 @@ public:
     auto line_no = mb.source_code_.add_line(fmt::format("{} {};", detail::type<Type>::name(), name_));
     auto dbg_variable =
         mb.dbg_builder_.createAutoVariable(mb.dbg_scope_, name_, mb.dbg_file_, line_no, detail::type<Type>::dbg());
-    mb.dbg_builder_.insertDeclare(variable_, dbg_variable, mb.dbg_builder_.createExpression(),
-                                  llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_), mb.ir_builder_.GetInsertBlock());
+    //mb.dbg_builder_.insertDeclare(variable_, dbg_variable, mb.dbg_builder_.createExpression(),
+    //                              llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_), mb.ir_builder_.GetInsertBlock());
   }
 
   template<typename Value> explicit variable(std::string const& n, Value const& v) : variable(n) { set<Value>(v); }
@@ -61,7 +61,7 @@ public:
     static_assert(std::is_same_v<Type, typename Value::value_type>);
     auto& mb = *detail::current_builder;
     auto line_no = mb.source_code_.add_line(fmt::format("{} = {};", name_, v));
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+    //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
     mb.ir_builder_.CreateAlignedStore(v.eval(), variable_, detail::type<Type>::alignment);
   }
 
