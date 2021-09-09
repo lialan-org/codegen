@@ -53,7 +53,7 @@ target_include_directories(codegen INTERFACE
   ${LLVM_INCLUDE_DIRS}
 )
 
-target_compile_features(codegen INTERFACE cxx_std_17)
+target_compile_features(codegen INTERFACE cxx_std_20)
 target_link_libraries(codegen INTERFACE ${CODEGEN_CXX_FLAGS})
 target_compile_options(codegen INTERFACE ${CODEGEN_CXX_FLAGS})
 target_link_libraries(codegen INTERFACE
