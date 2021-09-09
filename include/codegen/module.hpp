@@ -32,9 +32,10 @@ class module {
   llvm::orc::MangleAndInterner mangle_;
 
 private:
-  module(llvm::orc::ExecutionSession&, llvm::DataLayout const&);
+  module(llvm::orc::ExecutionSession& session, llvm::DataLayout const& dl)
+    : session_(&session), mangle_(session, dl) { }
 
-  void* get_address(std::string const&);
+  void* get_address(std::string const& address) {}
 
   friend class module_builder;
 

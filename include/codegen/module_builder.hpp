@@ -24,6 +24,7 @@
 
 #include <filesystem>
 #include <sstream>
+#include <fstream>
 #include <string>
 
 #include <llvm/IR/DIBuilder.h>
@@ -33,6 +34,8 @@
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+
+#include "compiler.hpp"
 
 namespace codegen {
 
@@ -68,12 +71,19 @@ public: // FIXME: proper encapsulation
     unsigned indent_ = 0;
 
   public:
-    unsigned add_line(std::string const&);
+    unsigned add_line(std::string const& line) {
+      source_code_ << std::string(indent_, ' ') << line << "\n";
+      return line_no_++;
+    }
+
     void enter_scope() { indent_ += 4; }
     void leave_scope() { indent_ -= 4; }
     unsigned current_line() const { return line_no_; }
-    std::string get() const;
+    std::string get() const {
+      return source_code_.str();
+    }
   };
+
   source_code_generator source_code_;
   std::filesystem::path source_file_;
 
@@ -90,7 +100,14 @@ public: // FIXME: proper encapsulation
   llvm::DIScope* dbg_scope_;
 
 public:
-  module_builder(compiler&, std::string const& name);
+  module_builder(compiler& c, std::string const& name)
+    : compiler_(&c), context_(std::make_unique<llvm::LLVMContext>()),
+      module_(std::make_unique<llvm::Module>(name, *context_)), ir_builder_(*context_),
+      source_file_(c.source_directory_ / (name + ".txt")), dbg_builder_(*module_),
+      dbg_file_(dbg_builder_.createFile(source_file_.string(), source_file_.parent_path().string())),
+      dbg_scope_(dbg_file_) {
+    dbg_builder_.createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus, dbg_file_, "codegen", true, "", 0);
+  }
 
   module_builder(module_builder const&) = delete;
   module_builder(module_builder&&) = delete;
@@ -100,14 +117,37 @@ public:
 
   template<typename FunctionType> auto declare_external_function(std::string const& name, FunctionType* fn);
 
-  [[nodiscard]] module build() &&;
+  [[nodiscard]] module build() && {
+    {
+      auto ofs = std::ofstream(source_file_, std::ios::trunc);
+      ofs << source_code_.get();
+    }
 
-  friend std::ostream& operator<<(std::ostream&, module_builder const&);
+    dbg_builder_.finalize();
+
+    module_->print(llvm::errs(), nullptr);
+
+    auto target_triple = compiler_->target_machine_->getTargetTriple();
+    module_->setDataLayout(compiler_->data_layout_);
+    module_->setTargetTriple(target_triple.str());
+
+    //throw_on_error(compiler_->optimize_layer_.add(compiler_->session_.getMainJITDylib(),
+    //                                              llvm::orc::ThreadSafeModule(std::move(module_), std::move(context_))));
+    return module{compiler_->session_, compiler_->data_layout_};
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, module_builder const& mb) {
+    //auto llvm_os = llvm::raw_os_ostream(os);
+    //mb.module_->print(llvm_os, nullptr);
+    return os;
+  }
 
 private:
-  void set_function_attributes(llvm::Function*);
+  void set_function_attributes(llvm::Function* func) {}
 
-  void declare_external_symbol(std::string const&, void*);
+  void declare_external_symbol(std::string const& name, void* address) {
+    compiler_->add_symbol(name, address);
+  }
 };
 
 namespace detail {
@@ -238,8 +278,20 @@ value<Type> constant(Type v) {
                      }()};
 }
 
-value<bool> true_();
-value<bool> false_();
+inline value<bool> true_() {
+  return constant(true);
+}
+inline value<bool> false_() {
+  return constant(false);
+}
+
+inline void return_() {
+  auto& mb = *detail::current_builder;
+  auto line_no = mb.source_code_.add_line("return;");
+  mb.exited_block_ = true;
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.CreateRetVoid();
+}
 
 namespace detail {
 

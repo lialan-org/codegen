@@ -34,6 +34,7 @@
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 
+#include "module.hpp"
 #include "utils.hpp"
 
 namespace codegen {
@@ -62,20 +63,35 @@ class compiler {
   friend class module_builder;
 
 private:
-  explicit compiler(llvm::orc::JITTargetMachineBuilder);
+  explicit compiler(llvm::orc::JITTargetMachineBuilder tmb)
+    : data_layout_(unwrap(tmb.getDefaultDataLayoutForTarget())), target_machine_(unwrap(tmb.createTargetMachine())),
+      mangle_(session_, data_layout_) {}
 
 public:
-  compiler();
-  ~compiler();
+  compiler()
+    : compiler([] {
+        LLVMInitializeNativeTarget();
+        LLVMInitializeNativeAsmPrinter();
+
+        auto tmb = unwrap(llvm::orc::JITTargetMachineBuilder::detectHost());
+        tmb.setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive);
+        //tmb.setCPU(llvm::sys::getHostCPUName());
+        return tmb;
+      }()) { }
+
+  ~compiler() {
+  //for (auto vk : loaded_modules_) { gdb_listener_->notifyFreeingObject(vk); }
+  std::filesystem::remove_all(source_directory_);
+}
 
   compiler(compiler const&) = delete;
   compiler(compiler&&) = delete;
 
-  void add_symbol(std::string const& name, void* address);
+  void add_symbol(std::string const& name, void* address) {}
 
 private:
   llvm::Expected<llvm::orc::ThreadSafeModule> optimize_module(llvm::orc::ThreadSafeModule,
-                                                              llvm::orc::MaterializationResponsibility const&);
+                                                              llvm::orc::MaterializationResponsibility const&) {}
 };
 
 } // namespace codegen

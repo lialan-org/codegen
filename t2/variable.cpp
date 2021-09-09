@@ -7,7 +7,6 @@
 #include "codegen/module_builder.hpp"
 #include "codegen/relational_ops.hpp"
 #include "codegen/statements.hpp"
-#include "codegen/struct_type.hpp"
 
 int32_t table1[][2] = {{0, 1}, {2, 3}, {4, 5}};
 int32_t table2[][2] = {{2, 9}, {8, 7}, {6, 5}};
@@ -51,6 +50,7 @@ void print_probe(int x, int y) {
 }
 
 int main() {
+  /*
   auto comp = codegen::compiler{};
   auto builder = codegen::module_builder(comp, "hash_join");
 
@@ -115,4 +115,5 @@ int main() {
   set_get_ptr((int32_t*)table1, 3);
   auto probe_ptr = module.get_address(probe_phase);
   probe_ptr((int32_t*)table2, 3);
+  */
 }
