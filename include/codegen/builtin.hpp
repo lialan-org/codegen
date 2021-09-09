@@ -26,25 +26,26 @@
 
 namespace codegen::builtin {
 
-template<typename Destination, typename Source, typename Size> void memcpy(Destination dst, Source src, Size n) {
-  static_assert(std::is_pointer_v<typename Destination::value_type>);
-  static_assert(std::is_pointer_v<typename Source::value_type>);
-  static_assert(std::is_same_v<typename Size::value_type, int32_t> ||
-                std::is_same_v<typename Size::value_type, int64_t>);
+// TODO: concept: is LLVM_TYPE
 
+template<typename T>
+concept Pointer = std::is_pointer_v<typename T::value_type>;
+
+template<typename S>
+concept Size = std::is_same_v<typename S::value_type, int32_t> ||
+               std::is_same_v<typename S::value_type, int64_t>;
+
+void memcpy(Pointer auto dst, Pointer auto src, Size auto n) {
   using namespace detail;
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcpy({}, {}, {});", dst, src, n));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
-  mb.ir_builder_.CreateMemCpy(dst.eval(), detail::type<typename Destination::value_type>::alignment, src.eval(),
-                              detail::type<typename Source::value_type>::alignment, n.eval());
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.CreateMemCpy(dst.eval(), detail::type<typename decltype(dst)::value_type>::alignment, src.eval(),
+                              detail::type<typename decltype(src)::value_type>::alignment, n.eval());
 }
 
-template<typename Source1, typename Source2, typename Size> value<int> memcmp(Source1 src1, Source2 src2, Size n) {
-  static_assert(std::is_pointer_v<typename Source1::value_type>);
-  static_assert(std::is_pointer_v<typename Source2::value_type>);
-
+value<int> memcmp(Pointer auto src1, Pointer auto src2, Size auto n) {
   using namespace detail;
   auto& mb = *detail::current_builder;
 
@@ -54,7 +55,7 @@ template<typename Source1, typename Source2, typename Size> value<int> memcmp(So
       llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, "memcmp", mb.module_.get());
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcmp_ret = memcmp({}, {}, {});", src1, src2, n));
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
   return value<int>{mb.ir_builder_.CreateCall(fn, {src1.eval(), src2.eval(), n.eval()}), "memcmp_ret"};
 }
 
