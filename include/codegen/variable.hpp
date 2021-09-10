@@ -26,7 +26,11 @@
 
 namespace codegen {
 
-template<typename Type> class variable {
+template<typename T>
+concept Variable = !std::is_const_v<T> && !std::is_volatile_v<T>;
+
+template<typename Type>
+class variable {
   llvm::Instruction* variable_;
   std::string name_;
 
@@ -47,7 +51,8 @@ public:
     //                              llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_), mb.ir_builder_.GetInsertBlock());
   }
 
-  template<typename Value> explicit variable(std::string const& n, Value const& v) : variable(n) { set<Value>(v); }
+  template<typename Value>
+  explicit variable(std::string const& n, Value const& v) : variable(n) { set<Value>(v); }
 
   variable(variable const&) = delete;
   variable(variable&&) = delete;
@@ -57,8 +62,8 @@ public:
     return value<Type>{v, name_};
   }
 
-  template<typename Value> void set(Value const& v) {
-    static_assert(std::is_same_v<Type, typename Value::value_type>);
+  template<typename Value>
+  void set(Value const& v) requires std::is_same_v<Type, typename Value::value_type> {
     auto& mb = *detail::current_builder;
     auto line_no = mb.source_code_.add_line(fmt::format("{} = {};", name_, v));
     //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
@@ -68,9 +73,7 @@ public:
   template<typename T = Type, typename Value>
   typename std::enable_if_t<std::is_array_v<T>, void> set(Value const& v) {
 
-
   }
-  
 
   // TODO
   // address-of operator gets you the pointer to the variable.
@@ -106,9 +109,9 @@ public:
 
   template<typename T = Type, typename IndexValue, typename Value>
   typename std::enable_if_t<std::is_array_v<T> &&
-                              std::is_integral_v<typename IndexValue::value_type> &&
-			      std::is_same_v<std::remove_all_extents_t<T>, typename Value::value_type>,
-	                    value<std::remove_all_extents_t<T>>>
+  std::is_integral_v<typename IndexValue::value_type> &&
+  std::is_same_v<std::remove_all_extents_t<T>, typename Value::value_type>,
+    value<std::remove_all_extents_t<T>>>
   setElem(IndexValue const& idx_v, Value const&& value_v) {
     auto& mb = *detail::current_builder;
     auto idx = idx_v.eval();

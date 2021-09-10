@@ -24,18 +24,12 @@
 
 #include "codegen/module_builder.hpp"
 
+#include "types.hpp"
+
 namespace codegen::builtin {
 
-// TODO: concept: is LLVM_TYPE
 
-template<typename T>
-concept Pointer = std::is_pointer_v<typename T::value_type>;
-
-template<typename S>
-concept Size = std::is_same_v<typename S::value_type, int32_t> ||
-               std::is_same_v<typename S::value_type, int64_t>;
-
-void memcpy(Pointer auto dst, Pointer auto src, Size auto n) {
+void memcpy(codegen::Pointer auto dst, codegen::Pointer auto src, codegen::Size auto n) {
   using namespace detail;
   auto& mb = *detail::current_builder;
 
@@ -45,7 +39,7 @@ void memcpy(Pointer auto dst, Pointer auto src, Size auto n) {
                               detail::type<typename decltype(src)::value_type>::alignment, n.eval());
 }
 
-value<int> memcmp(Pointer auto src1, Pointer auto src2, Size auto n) {
+value<int> memcmp(codegen::Pointer auto src1, codegen::Pointer auto src2, codegen::Size auto n) {
   using namespace detail;
   auto& mb = *detail::current_builder;
 
@@ -61,7 +55,8 @@ value<int> memcmp(Pointer auto src1, Pointer auto src2, Size auto n) {
 
 namespace detail {
 
-template<typename Value> class bswap_impl {
+template<typename Value>
+class bswap_impl {
   Value value_;
 
 public:
@@ -79,7 +74,8 @@ public:
 
 } // namespace detail
 
-template<typename Value> auto bswap(Value v) {
+template<typename Value>
+auto bswap(Value v) {
   return detail::bswap_impl<Value>(v);
 }
 
