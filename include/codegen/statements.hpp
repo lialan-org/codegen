@@ -137,8 +137,8 @@ inline value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, 
   auto values = std::vector<llvm::Value*>{};
   [[maybe_unused]] auto _ = {0, ((values.emplace_back(args.eval())), 0)...};
 
-  //auto ret = mb.ir_builder_.CreateCall(fn, values);
-  //return value<ReturnType>{ret, fmt::format("{}_ret", fn.name())};
+  auto ret = mb.ir_builder_.CreateCall(fn, values);
+  return value<ReturnType>{ret, fmt::format("{}_ret", fn.name())};
 }
 
 template<typename Pointer, typename = std::enable_if_t<std::is_pointer_v<typename std::decay_t<Pointer>::value_type>>>

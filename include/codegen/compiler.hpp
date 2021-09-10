@@ -39,6 +39,8 @@
 
 namespace codegen {
 
+inline static llvm::ExitOnError ExitOnErr;
+
 class compiler {
   llvm::orc::ExecutionSession session_;
 
@@ -64,7 +66,8 @@ class compiler {
 
 private:
   explicit compiler(llvm::orc::JITTargetMachineBuilder tmb)
-    : data_layout_(unwrap(tmb.getDefaultDataLayoutForTarget())), target_machine_(unwrap(tmb.createTargetMachine())),
+    : data_layout_(ExitOnErr(tmb.getDefaultDataLayoutForTarget())),
+      target_machine_(ExitOnErr(tmb.createTargetMachine())),
       mangle_(session_, data_layout_) {}
 
 public:
@@ -73,7 +76,7 @@ public:
         LLVMInitializeNativeTarget();
         LLVMInitializeNativeAsmPrinter();
 
-        auto tmb = unwrap(llvm::orc::JITTargetMachineBuilder::detectHost());
+        auto tmb = ExitOnErr(llvm::orc::JITTargetMachineBuilder::detectHost());
         tmb.setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive);
         //tmb.setCPU(llvm::sys::getHostCPUName());
         return tmb;
