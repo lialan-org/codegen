@@ -9,12 +9,33 @@ namespace codegen {
 template<typename...>
 inline constexpr bool false_v = false;
 
+
 template<typename T>
-concept LLVMType = std::same_as<T, bool> ||
-                   std::same_as<T, void> ||
-                   std::same_as<T, std::byte> ||
-                   std::is_integral_v<T> ||
-                   std::is_floating_point_v<T>;
+concept LLVMPODType = std::same_as<T, bool> ||
+                      std::same_as<T, void> ||
+                      std::same_as<T, std::byte> ||
+                      std::is_integral_v<T> ||
+                      std::is_floating_point_v<T>;
+
+template<typename T>
+concept LLVMPointerType = requires (T t) {
+  std::is_pointer_v<T>;
+  LLVMPODType<std::remove_pointer_t<T>>;
+};
+
+template<typename T>
+concept LLVMArrayType = requires (T t) {
+  std::is_array_v<T>;
+  LLVMPointerType<std::remove_all_extents_t<T>>;
+  LLVMPODType<std::remove_all_extents_t<T>>;
+};
+
+template<typename T>
+concept LLVMType = requires (T t) {
+  LLVMPODType<T>;
+  LLVMPointerType<T>;
+  LLVMArrayType<T>;
+};
 
 template<typename T>
 concept LLVMTypeWrapper = requires (T t) {
@@ -194,7 +215,7 @@ struct type<Type[N]> {
 };
 
 
-template<typename Type>
+template<LLVMPODType Type>
 inline llvm::Value* get_constant(Type v) {
   if constexpr (std::is_integral_v<Type>) {
     return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
@@ -211,7 +232,9 @@ template<typename> class function_builder;
 
 template<typename ReturnType, typename... Arguments>
 class function_builder<ReturnType(Arguments...)> {
-  template<typename Argument> void prepare_argument(llvm::Function::arg_iterator args, size_t idx) {
+
+  template<typename Argument>
+  void prepare_argument(llvm::Function::arg_iterator args, size_t idx) {
     auto& mb = *current_builder;
 
     auto it = args + idx;
@@ -362,10 +385,10 @@ public:
 namespace codegen {
 
 template<typename Type>
-inline value<Type> constant(Type v) requires std::is_arithmetic_v<Type> {
-  static_assert(!std::is_const_v<Type>);
+inline value<Type> constant(Type v) requires std::is_arithmetic_v<Type> &&
+                                             (!std::is_const_v<Type>) {
   return value<Type>{detail::get_constant<Type>(v), [&] {
-                       if constexpr (std::is_same_v<Type, bool>) {
+                       if constexpr (std::same_as<Type, bool>) {
                          return v ? "true" : "false";
                        } else {
                          return std::to_string(v);
