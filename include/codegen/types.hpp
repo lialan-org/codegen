@@ -1,7 +1,6 @@
 #pragma once
 
 #include "module_builder.hpp"
-#include "value.hpp"
 
 #include <concepts>
 
@@ -11,31 +10,98 @@ template<typename...>
 inline constexpr bool false_v = false;
 
 template<typename T>
-concept Pointer = std::is_pointer_v<typename T::value_type>;
+concept LLVMType = std::same_as<T, bool> ||
+                   std::same_as<T, void> ||
+                   std::same_as<T, std::byte> ||
+                   std::is_integral_v<T> ||
+                   std::is_floating_point_v<T>;
+
+template<typename T>
+concept LLVMTypeWrapper = requires (T t) {
+  typename T::value_type;
+  { LLVMType<typename T::value_type> };
+};
+
+template<typename T>
+concept Pointer = requires (T t) {
+  LLVMTypeWrapper<T>;
+  std::is_pointer_v<typename T::value_type>;
+};
 
 template<typename S>
-concept Size = std::is_same_v<typename S::value_type, int32_t> ||
-               std::is_same_v<typename S::value_type, int64_t>;
+concept Size = requires (S s) {
+  LLVMTypeWrapper<S>;
+  std::is_same_v<typename S::value_type, int32_t> || std::is_same_v<typename S::value_type, int64_t>;
+};
 
 template<typename T>
-concept Integral = std::is_integral_v<T>; // <concepts> does not have it??
+concept Integral = requires (T t) {
+  LLVMTypeWrapper<T>;
+  std::is_integral_v<T>; // <concepts> does not have it??
+};
 
 template<typename T>
-concept Bool = std::same_as<T, bool>;
+concept Bool = requires (T t) {
+  LLVMTypeWrapper<T>;
+  std::same_as<typename T::value_type, bool>;
+};
 
 template<typename T>
-concept Void = std::same_as<T, void>;
+concept Void = requires (T t) {
+  LLVMTypeWrapper<T>;
+  std::same_as<typename T::value_type, void>;
+};
 
 template<typename T>
-concept Byte = std::same_as<T, std::byte>;
+concept Byte = requires (T t) {
+  LLVMTypeWrapper<T>;
+  std::same_as<typename T::value_type, std::byte>;
+};
 
 template<typename T>
-concept Float = std::same_as<T, float>;
+concept Float = requires (T t) {
+  LLVMTypeWrapper<T>;
+  std::same_as<typename T::value_type, float>;
+};
 
 template<typename T>
-concept Double = std::same_as<T, double>;
+concept Double = requires (T t) {
+  LLVMTypeWrapper<T>;
+  std::same_as<typename T::value_type, double>;
+};
+
+template<typename T>
+concept ValueType = LLVMType<T> && !std::is_const_v<T> && !std::is_volatile_v<T>;
 
 }; // namespace codegen
+
+namespace codegen {
+
+template<typename> class value;
+
+template<ValueType Type>
+class value<Type> {
+  llvm::Value* value_;
+  std::string name_;
+
+public:
+  explicit value(llvm::Value* v, std::string const& n) : value_(v), name_(n) {}
+
+  value(value const&) = default;
+  value(value&&) = default;
+  void operator=(value const&) = delete;
+  void operator=(value&&) = delete;
+
+  using value_type = Type;
+
+  operator llvm::Value*() const noexcept { return value_; }
+
+  llvm::Value* eval() const { return value_; }
+
+  friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
+};
+
+} // namespace codegen
 
 namespace codegen::detail {
 

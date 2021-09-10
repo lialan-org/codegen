@@ -30,15 +30,14 @@ namespace codegen {
 template<typename T>
 concept Variable = !std::is_const_v<T> && !std::is_volatile_v<T>;
 
-template<typename Type>
-class variable {
+template<typename> class variable;
+
+template<Variable Type>
+class variable<Type> {
   llvm::Instruction* variable_;
   std::string name_;
 
 public:
-  static_assert(!std::is_const_v<Type>);
-  static_assert(!std::is_volatile_v<Type>);
-
   explicit variable(std::string const& n) : name_(n) {
     auto& mb = *detail::current_builder;
 
