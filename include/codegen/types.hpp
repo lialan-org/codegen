@@ -2,6 +2,8 @@
 
 #include "module_builder.hpp"
 
+#include <concepts>
+
 namespace codegen {
 
 template<typename...>
@@ -14,12 +16,32 @@ template<typename S>
 concept Size = std::is_same_v<typename S::value_type, int32_t> ||
                std::is_same_v<typename S::value_type, int64_t>;
 
+template<typename T>
+concept Integral = std::is_integral_v<T>; // <concepts> does not have it??
+
+template<typename T>
+concept Bool = std::same_as<T, bool>;
+
+template<typename T>
+concept Void = std::same_as<T, void>;
+
+template<typename T>
+concept Byte = std::same_as<T, std::byte>;
+
+template<typename T>
+concept Float = std::same_as<T, float>;
+
+template<typename T>
+concept Double = std::same_as<T, double>;
+
 }; // namespace codegen
 
 namespace codegen::detail {
 
-template<typename Type> struct type {
-  static_assert(std::is_integral_v<Type>);
+template<typename> struct type;
+
+template<Integral Type>
+struct type<Type> {
   static constexpr size_t alignment = alignof(Type);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(
@@ -29,14 +51,16 @@ template<typename Type> struct type {
   static std::string name() { return fmt::format("{}{}", std::is_signed_v<Type> ? 'i' : 'u', sizeof(Type) * 8); }
 };
 
-template<> struct type<void> {
+template<Void Type>
+struct type<Type> {
   static constexpr size_t alignment = 0;
   static llvm::DIType* dbg() { return nullptr; }
   static llvm::Type* llvm() { return llvm::Type::getVoidTy(*current_builder->context_); }
   static std::string name() { return "void"; }
 };
 
-template<> struct type<bool> {
+template<Bool Type>
+struct type<Type> {
   static constexpr size_t alignment = alignof(bool);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(name(), 8, llvm::dwarf::DW_ATE_boolean);
@@ -45,7 +69,8 @@ template<> struct type<bool> {
   static std::string name() { return "bool"; }
 };
 
-template<> struct type<std::byte> {
+template<Byte Type>
+struct type<Type> {
   static constexpr size_t alignment = 1;
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(name(), 8, llvm::dwarf::DW_ATE_unsigned);
@@ -54,7 +79,8 @@ template<> struct type<std::byte> {
   static std::string name() { return "byte"; }
 };
 
-template<> struct type<float> {
+template<Float Type>
+struct type<Type> {
   static constexpr size_t alignment = alignof(float);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(name(), 32, llvm::dwarf::DW_ATE_float);
@@ -63,7 +89,8 @@ template<> struct type<float> {
   static std::string name() { return "f32"; }
 };
 
-template<> struct type<double> {
+template<Double Type>
+struct type<Type> {
   static constexpr size_t alignment = alignof(double);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(name(), 64, llvm::dwarf::DW_ATE_float);
@@ -72,7 +99,8 @@ template<> struct type<double> {
   static std::string name() { return "f64"; }
 };
 
-template<typename Type> struct type<Type*> {
+template<typename Type>
+struct type<Type*> {
   static constexpr size_t alignment = alignof(Type*);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createPointerType(type<std::remove_cv_t<Type>>::dbg(), sizeof(Type*) * 8);
@@ -82,7 +110,8 @@ template<typename Type> struct type<Type*> {
 };
 
 // array type
-template<typename Type, size_t N> struct type<Type[N]> {
+template<typename Type, size_t N>
+struct type<Type[N]> {
   using ElementType = Type; // grab the underlying type
   static constexpr size_t alignment = alignof(Type);
 
