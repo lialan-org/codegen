@@ -98,10 +98,8 @@ concept ValueType = LLVMType<T> && !std::is_const_v<T> && !std::is_volatile_v<T>
 
 namespace codegen {
 
-template<typename> class value;
-
 template<ValueType Type>
-class value<Type> {
+class value {
   llvm::Value* value_;
   std::string name_;
 
@@ -116,9 +114,7 @@ public:
   using value_type = Type;
 
   operator llvm::Value*() const noexcept { return value_; }
-
   llvm::Value* eval() const { return value_; }
-
   friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
 };
 
@@ -126,6 +122,8 @@ public:
 
 namespace codegen::detail {
 
+// `typename` here could be change to LLVMType but that would cause clang to complain because LLVMType is
+// more specialized.
 template<typename> struct type;
 
 template<Integral Type>
@@ -243,9 +241,9 @@ class function_builder<ReturnType(Arguments...)> {
 
     auto dbg_arg = mb.dbg_builder_.createParameterVariable(mb.dbg_scope_, name, idx + 1, mb.dbg_file_,
                                                            mb.source_code_.current_line(), type<Argument>::dbg());
-    //mb.dbg_builder_.insertDbgValueIntrinsic(&*(args + idx), dbg_arg, mb.dbg_builder_.createExpression(),
-    //                                        llvm::DebugLoc::get(mb.source_code_.current_line(), 1, mb.dbg_scope_),
-    //                                        mb.ir_builder_.GetInsertBlock());
+    mb.dbg_builder_.insertDbgValueIntrinsic(&*(args + idx), dbg_arg, mb.dbg_builder_.createExpression(),
+                                            llvm::DILocation::get(*mb.context_, mb.source_code_.current_line(), 1, mb.dbg_scope_),
+                                            mb.ir_builder_.GetInsertBlock());
   }
 
   template<size_t... Idx, typename FunctionBuilder>
@@ -284,7 +282,8 @@ public:
     auto parent_scope = std::exchange(mb.dbg_scope_, dbg_fn_scope);
     fn->setSubprogram(dbg_fn_scope);
 
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc{});
+    // TODO: instantiate it?
+    //mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation{});
 
     auto block = llvm::BasicBlock::Create(*mb.context_, "entry", fn);
     mb.ir_builder_.SetInsertPoint(block);

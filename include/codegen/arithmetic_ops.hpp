@@ -23,6 +23,7 @@
 #pragma once
 
 #include "codegen/module_builder.hpp"
+#include "types.hpp"
 
 namespace codegen {
 
@@ -39,7 +40,8 @@ enum class arithmetic_operation_type {
   xor_,
 };
 
-template<arithmetic_operation_type Op, typename LHS, typename RHS> class arithmetic_operation {
+template<arithmetic_operation_type Op, LLVMTypeWrapper LHS, LLVMTypeWrapper RHS>
+class arithmetic_operation {
   LHS lhs_;
   RHS rhs_;
 
@@ -108,7 +110,8 @@ enum class pointer_arithmetic_operation_type {
   sub,
 };
 
-template<pointer_arithmetic_operation_type Op, typename LHS, typename RHS> class pointer_arithmetic_operation {
+template<pointer_arithmetic_operation_type Op, LLVMTypeWrapper LHS, LLVMTypeWrapper RHS>
+class pointer_arithmetic_operation {
   LHS lhs_;
   RHS rhs_;
 
