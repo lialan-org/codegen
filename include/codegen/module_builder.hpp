@@ -106,11 +106,15 @@ public: // FIXME: proper encapsulation
 
 public:
   module_builder(compiler& c, std::string const& name)
-    : compiler_(&c), context_(std::make_unique<llvm::LLVMContext>()),
-      module_(std::make_unique<llvm::Module>(name, *context_)), ir_builder_(*context_),
-      source_file_(c.source_directory_ / (name + ".txt")), dbg_builder_(*module_),
+    : compiler_(&c),
+      context_(std::make_unique<llvm::LLVMContext>()),
+      module_(std::make_unique<llvm::Module>(name, *context_)),
+      ir_builder_(*context_),
+      source_file_(c.source_directory_ / (name + ".txt")),
+      dbg_builder_(*module_),
       dbg_file_(dbg_builder_.createFile(source_file_.string(), source_file_.parent_path().string())),
-      dbg_scope_(dbg_file_) {
+      dbg_scope_(dbg_file_)
+  {
     dbg_builder_.createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus, dbg_file_, "codegen", true, "", 0);
   }
 
@@ -141,8 +145,9 @@ public:
     module_->setDataLayout(compiler_->data_layout_);
     module_->setTargetTriple(target_triple.str());
 
-    //throw_on_error(compiler_->optimize_layer_.add(compiler_->session_.getMainJITDylib(),
-    //                                              llvm::orc::ThreadSafeModule(std::move(module_), std::move(context_))));
+    // TODO: use a custom resource tracker
+    throw_on_error(compiler_->optimize_layer_.add(compiler_->getMainJITDylib().getDefaultResourceTracker(),
+                                                  llvm::orc::ThreadSafeModule(std::move(module_), std::move(context_))));
     return module{compiler_->session_, compiler_->data_layout_};
   }
 
