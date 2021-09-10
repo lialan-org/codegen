@@ -164,39 +164,4 @@ inline thread_local module_builder* current_builder;
 
 } // namespace detail
 
-template<typename Type> class value {
-  llvm::Value* value_;
-  std::string name_;
-
-public:
-  static_assert(!std::is_const_v<Type>);
-  static_assert(!std::is_volatile_v<Type>);
-
-  explicit value(llvm::Value* v, std::string const& n) : value_(v), name_(n) {}
-
-  value(value const&) = default;
-  value(value&&) = default;
-  void operator=(value const&) = delete;
-  void operator=(value&&) = delete;
-
-  using value_type = Type;
-
-  operator llvm::Value*() const noexcept { return value_; }
-
-  llvm::Value* eval() const { return value_; }
-
-  friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
-};
-
-void return_();
-
-template<typename Value> void return_(Value v) {
-  auto& mb = *detail::current_builder;
-  mb.exited_block_ = true;
-  auto line_no = mb.source_code_.add_line(fmt::format("return {};", v));
-  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
-  mb.ir_builder_.CreateRet(v.eval());
-}
-
-
 } // namespace codegen

@@ -51,7 +51,8 @@ inline void throw_on_error(llvm::Error err) {
   if (err) { throw llvm_error(std::move(err)); }
 }
 
-template<typename T> T unwrap(llvm::Expected<T> value) {
+template<typename T>
+inline T unwrap(llvm::Expected<T> value) {
   if (!value) { throw llvm_error(value.takeError()); }
   return std::move(*value);
 }

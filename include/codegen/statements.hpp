@@ -30,7 +30,7 @@ namespace codegen {
 
 template<typename Condition, typename TrueBlock, typename FalseBlock,
          typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
-void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
+inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
@@ -85,7 +85,7 @@ void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
 
 template<typename Condition, typename TrueBlock,
          typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
-void if_(Condition&& cnd, TrueBlock&& tb) {
+inline void if_(Condition&& cnd, TrueBlock&& tb) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
@@ -121,7 +121,7 @@ void if_(Condition&& cnd, TrueBlock&& tb) {
 }
 
 template<typename ReturnType, typename... Arguments, typename... Values>
-value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&&... args) {
+inline value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&&... args) {
   static_assert((std::is_same_v<Arguments, typename std::decay_t<Values>::value_type> && ...));
 
   auto& mb = *detail::current_builder;
@@ -142,7 +142,7 @@ value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&
 }
 
 template<typename Pointer, typename = std::enable_if_t<std::is_pointer_v<typename std::decay_t<Pointer>::value_type>>>
-auto load(Pointer ptr) {
+inline auto load(Pointer ptr) {
   using value_type = std::remove_cv_t<std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>>;
   auto& mb = *detail::current_builder;
 
@@ -167,7 +167,7 @@ template<
                                 !std::is_const_v<std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>> &&
                                 std::is_same_v<typename std::decay_t<Value>::value_type,
                                                std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>>>>
-void store(Value v, Pointer ptr) {
+inline void store(Value v, Pointer ptr) {
   using value_type = std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>;
   auto& mb = *detail::current_builder;
 
@@ -178,7 +178,7 @@ void store(Value v, Pointer ptr) {
 
 template<typename ConditionFn, typename Body,
          typename = std::enable_if_t<std::is_same_v<typename std::invoke_result_t<ConditionFn>::value_type, bool>>>
-void while_(ConditionFn cnd_fn, Body bdy) {
+inline void while_(ConditionFn cnd_fn, Body bdy) {
   auto& mb = *detail::current_builder;
 
   auto line_no = mb.source_code_.current_line() + 1;
@@ -265,5 +265,13 @@ inline void return_() {
   mb.ir_builder_.CreateRetVoid();
 }
 
+template<typename Value>
+inline void return_(Value v) {
+  auto& mb = *detail::current_builder;
+  mb.exited_block_ = true;
+  auto line_no = mb.source_code_.add_line(fmt::format("return {};", v));
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.CreateRet(v.eval());
+}
 
 } // namespace codegen

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "module_builder.hpp"
+#include "value.hpp"
 
 #include <concepts>
 
@@ -128,7 +129,7 @@ struct type<Type[N]> {
 
 
 template<typename Type>
-llvm::Value* get_constant(Type v) {
+inline llvm::Value* get_constant(Type v) {
   if constexpr (std::is_integral_v<Type>) {
     return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
   } else if constexpr (std::is_floating_point_v<Type>) {
@@ -142,7 +143,8 @@ llvm::Value* get_constant(Type v) {
 
 template<typename> class function_builder;
 
-template<typename ReturnType, typename... Arguments> class function_builder<ReturnType(Arguments...)> {
+template<typename ReturnType, typename... Arguments>
+class function_builder<ReturnType(Arguments...)> {
   template<typename Argument> void prepare_argument(llvm::Function::arg_iterator args, size_t idx) {
     auto& mb = *current_builder;
 
@@ -209,7 +211,8 @@ public:
 
 template<typename> class function_declaration_builder;
 
-template<typename ReturnType, typename... Arguments> class function_declaration_builder<ReturnType(Arguments...)> {
+template<typename ReturnType, typename... Arguments>
+class function_declaration_builder<ReturnType(Arguments...)> {
 public:
   function_ref<ReturnType, Arguments...> operator()(std::string const& name) {
     auto& mb = *current_builder;
@@ -221,7 +224,8 @@ public:
   }
 };
 
-template<typename FromValue, typename ToType> class bit_cast_impl {
+template<typename FromValue, typename ToType>
+class bit_cast_impl {
   FromValue from_value_;
 
   using from_type = typename FromValue::value_type;
@@ -243,7 +247,8 @@ public:
   }
 };
 
-template<typename FromValue, typename ToType> class cast_impl {
+template<typename FromValue, typename ToType>
+class cast_impl {
   FromValue from_value_;
 
   using from_type = typename FromValue::value_type;
@@ -291,7 +296,7 @@ public:
 namespace codegen {
 
 template<typename Type>
-value<Type> constant(Type v) requires std::is_arithmetic_v<Type> {
+inline value<Type> constant(Type v) requires std::is_arithmetic_v<Type> {
   static_assert(!std::is_const_v<Type>);
   return value<Type>{detail::get_constant<Type>(v), [&] {
                        if constexpr (std::is_same_v<Type, bool>) {
@@ -302,11 +307,13 @@ value<Type> constant(Type v) requires std::is_arithmetic_v<Type> {
                      }()};
 }
 
-template<typename ToType, typename FromValue> auto bit_cast(FromValue v) {
+template<typename ToType, typename FromValue>
+inline auto bit_cast(FromValue v) {
   return detail::bit_cast_impl<FromValue, ToType>(v);
 }
 
-template<typename ToType, typename FromValue> auto cast(FromValue v) {
+template<typename ToType, typename FromValue>
+inline auto cast(FromValue v) {
   return detail::cast_impl<FromValue, ToType>(v);
 }
 
