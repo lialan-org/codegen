@@ -33,6 +33,9 @@
 #include <llvm/ExecutionEngine/Orc/IRTransformLayer.h>
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/ExecutionEngine/Orc/CompileUtils.h>
+
 
 #include "module.hpp"
 #include "utils.hpp"
@@ -49,11 +52,11 @@ class compiler {
 
   llvm::orc::MangleAndInterner mangle_;
 
-  //llvm::orc::RTDyldObjectLinkingLayer object_layer_;
-  //llvm::orc::IRCompileLayer compile_layer_;
+  llvm::orc::RTDyldObjectLinkingLayer object_layer_;
+  llvm::orc::IRCompileLayer compile_layer_;
   //llvm::orc::IRTransformLayer optimize_layer_;
 
-  //llvm::JITEventListener* gdb_listener_;
+  llvm::JITEventListener* gdb_listener_;
 
   std::filesystem::path source_directory_;
 
@@ -68,7 +71,10 @@ private:
   explicit compiler(llvm::orc::JITTargetMachineBuilder tmb)
     : data_layout_(ExitOnErr(tmb.getDefaultDataLayoutForTarget())),
       target_machine_(ExitOnErr(tmb.createTargetMachine())),
-      mangle_(session_, data_layout_) {}
+      mangle_(session_, data_layout_),
+      object_layer_(session_, [] { return std::make_unique<llvm::SectionMemoryManager>(); }),
+      compile_layer_(session_, object_layer_, std::make_unique<llvm::orc::SimpleCompiler>(*target_machine_))
+  {}
 
 public:
   compiler()
