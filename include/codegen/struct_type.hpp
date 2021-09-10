@@ -1,6 +1,8 @@
 #pragma once
 
-#include "codegen/module_builder.hpp"
+#include "module_builder.hpp"
+#include "types.hpp"
+
 #include <vector>
 
 namespace codegen {

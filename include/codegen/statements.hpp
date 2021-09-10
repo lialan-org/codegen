@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include "codegen/module_builder.hpp"
-#include "codegen/utils.hpp"
+#include "module_builder.hpp"
+#include "types.hpp"
+#include "utils.hpp"
 
 namespace codegen {
 
@@ -246,6 +247,22 @@ inline void continue_() {
   //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
 
   mb.ir_builder_.CreateBr(mb.current_loop_.continue_block_);
+}
+
+inline value<bool> true_() {
+  return constant(true);
+}
+
+inline value<bool> false_() {
+  return constant(false);
+}
+
+inline void return_() {
+  auto& mb = *detail::current_builder;
+  auto line_no = mb.source_code_.add_line("return;");
+  mb.exited_block_ = true;
+  //mb.ir_builder_.SetCurrentDebugLocation(llvm::DebugLoc::get(line_no, 1, mb.dbg_scope_));
+  mb.ir_builder_.CreateRetVoid();
 }
 
 
