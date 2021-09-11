@@ -28,7 +28,7 @@
 
 namespace codegen {
 
-template<typename Condition, typename TrueBlock, typename FalseBlock,
+template<ConditionType Condition, typename TrueBlock, typename FalseBlock,
          typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
 inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   auto& mb = *detail::current_builder;

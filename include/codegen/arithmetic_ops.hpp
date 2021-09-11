@@ -156,78 +156,56 @@ public:
 
 } // namespace detail
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator+(LHS lhs, RHS rhs) {
+template<LLVMArithmeticType LHS, LLVMArithmeticType RHS>
+auto operator+(LHS lhs, RHS rhs) requires std::same_as<decltype(LHS::value_type), decltype(RHS::value_type)> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::add, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator-(LHS lhs, RHS rhs) {
+template<LLVMArithmeticType LHS, LLVMArithmeticType RHS>
+auto operator-(LHS lhs, RHS rhs) requires std::same_as<decltype(LHS::value_type), decltype(RHS::value_type)> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::sub, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator*(LHS lhs, RHS rhs) {
+template<LLVMArithmeticType LHS, LLVMArithmeticType RHS>
+auto operator*(LHS lhs, RHS rhs) requires std::same_as<decltype(LHS::value_type), decltype(RHS::value_type)> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::mul, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator/(LHS lhs, RHS rhs) {
+template<LLVMArithmeticType LHS, LLVMArithmeticType RHS>
+auto operator/(LHS lhs, RHS rhs) requires std::same_as<decltype(LHS::value_type), decltype(RHS::value_type)> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::div, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator%(LHS lhs, RHS rhs) {
+template<LLVMArithmeticType LHS, LLVMArithmeticType RHS>
+auto operator%(LHS lhs, RHS rhs) requires std::same_as<decltype(LHS::value_type), decltype(RHS::value_type)> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::mod, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_integral_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator&(LHS lhs, RHS rhs) {
+template<LLVMIntegralType LHS, LLVMIntegralType RHS>
+auto operator&(LHS lhs, RHS rhs) requires std::same_as<decltype(LHS::value_type), decltype(RHS::value_type)> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::and_, LHS, RHS>(std::move(lhs),
                                                                                          std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_integral_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator|(LHS lhs, RHS rhs) {
+template<LLVMIntegralType LHS, LLVMIntegralType RHS>
+auto operator|(LHS lhs, RHS rhs) requires std::same_as<decltype(LHS::value_type), decltype(RHS::value_type)> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::or_, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_integral_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator^(LHS lhs, RHS rhs) {
+template<LLVMIntegralType LHS, LLVMIntegralType RHS>
+auto operator^(LHS lhs, RHS rhs) requires std::same_as<decltype(LHS::value_type), decltype(RHS::value_type)> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::xor_, LHS, RHS>(std::move(lhs),
                                                                                          std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_integral_v<typename RHS::value_type> &&
-                                     std::is_pointer_v<typename LHS::value_type>>,
-         typename = void>
-auto operator+(LHS lhs, RHS rhs) {
+template<LLVMPointerType LHS, LLVMIntegralType RHS>
+LHS operator+(LHS lhs, RHS rhs) {
   return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::add, LHS, RHS>(std::move(lhs),
                                                                                                         std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_integral_v<typename RHS::value_type> &&
-                                     std::is_pointer_v<typename LHS::value_type>>,
-         typename = void>
-auto operator-(LHS lhs, RHS rhs) {
+template<LLVMPointerType LHS, LLVMIntegralType RHS>
+LHS operator-(LHS lhs, RHS rhs) {
   return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::sub, LHS, RHS>(std::move(lhs),
                                                                                                         std::move(rhs));
 }
