@@ -30,10 +30,8 @@ namespace codegen {
 template<typename T>
 concept Variable = !std::is_const_v<T> && !std::is_volatile_v<T>;
 
-template<typename> class variable;
-
 template<Variable Type>
-class variable<Type> {
+class variable {
   llvm::Instruction* variable_;
   std::string name_;
 

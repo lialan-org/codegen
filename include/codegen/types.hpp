@@ -9,33 +9,27 @@ namespace codegen {
 template<typename...>
 inline constexpr bool false_v = false;
 
+template<typename T>
+concept PlainType = !std::is_const_v<T> && !std::is_volatile_v<T>;
 
 template<typename T>
-concept LLVMPODType = std::same_as<T, bool> ||
-                      std::same_as<T, void> ||
-                      std::same_as<T, std::byte> ||
-                      std::is_integral_v<T> ||
-                      std::is_floating_point_v<T>;
+concept LLVMPODType = (std::same_as<T, void> ||
+                       std::same_as<T, std::byte> ||
+                       std::same_as<T, int8_t> ||
+                       std::is_integral_v<T> ||
+                       std::is_floating_point_v<T>)
+                    && PlainType<T>;
 
 template<typename T>
-concept LLVMPointerType = requires (T t) {
-  std::is_pointer_v<T>;
-  LLVMPODType<std::remove_pointer_t<T>>;
-};
+concept LLVMPointerType = std::is_pointer_v<T> && LLVMPODType<std::remove_pointer_t<T>>;
 
 template<typename T>
-concept LLVMArrayType = requires (T t) {
-  std::is_array_v<T>;
-  LLVMPointerType<std::remove_all_extents_t<T>>;
-  LLVMPODType<std::remove_all_extents_t<T>>;
-};
+concept LLVMArrayType = std::is_array_v<T> &&
+                        LLVMPODType<std::remove_all_extents_t<T>> &&
+                        std::extent_v<T> != 0;
 
 template<typename T>
-concept LLVMType = requires (T t) {
-  LLVMPODType<T>;
-  LLVMPointerType<T>;
-  LLVMArrayType<T>;
-};
+concept LLVMType = LLVMPODType<T> || LLVMPointerType<T> || LLVMArrayType<T>;
 
 template<typename T>
 concept LLVMTypeWrapper = requires (T t) {
@@ -44,16 +38,12 @@ concept LLVMTypeWrapper = requires (T t) {
 };
 
 template<typename T>
-concept Pointer = requires (T t) {
-  LLVMTypeWrapper<T>;
-  std::is_pointer_v<typename T::value_type>;
-};
+concept Pointer = LLVMTypeWrapper<T> && std::is_pointer_v<typename T::value_type>;
 
 template<typename S>
-concept Size = requires (S s) {
-  LLVMTypeWrapper<S>;
-  std::is_same_v<typename S::value_type, int32_t> || std::is_same_v<typename S::value_type, int64_t>;
-};
+concept Size = LLVMTypeWrapper<S> &&
+              (std::is_same_v<typename S::value_type, int32_t> ||
+               std::is_same_v<typename S::value_type, int64_t>);
 
 template<typename T>
 concept Integral = requires (T t) {
@@ -91,14 +81,11 @@ concept Double = requires (T t) {
   std::same_as<typename T::value_type, double>;
 };
 
-template<typename T>
-concept ValueType = LLVMType<T> && !std::is_const_v<T> && !std::is_volatile_v<T>;
-
 }; // namespace codegen
 
 namespace codegen {
 
-template<ValueType Type>
+template<LLVMType Type>
 class value {
   llvm::Value* value_;
   std::string name_;
@@ -212,8 +199,8 @@ struct type<Type[N]> {
 };
 
 
-template<LLVMPODType Type>
-inline llvm::Value* get_constant(Type v) {
+inline llvm::Value* get_constant(LLVMPODType auto v) {
+  using Type = decltype(v);
   if constexpr (std::is_integral_v<Type>) {
     return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
   } else if constexpr (std::is_floating_point_v<Type>) {
@@ -221,7 +208,7 @@ inline llvm::Value* get_constant(Type v) {
   } else if constexpr (std::is_same_v<Type, bool>) {
     return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(1, v, true));
   } else {
-    static_assert(false_v<Type>, "unsupported types");
+    llvm_unreachable("Unsupported type");
   }
 }
 
