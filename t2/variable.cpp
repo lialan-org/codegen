@@ -35,7 +35,7 @@ int64_t probe_hashmap(int32_t i) {
     probe_results.push_back(table1_index);
     ++counter;
   }
-  printf("\n   Total found: %d\n", counter);
+  printf("\n   Total found: %lld\n", counter);
   return counter;
 }
 

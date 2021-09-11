@@ -33,6 +33,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 
+#include <llvm/Support/raw_os_ostream.h>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -122,10 +123,6 @@ public:
   module_builder(module_builder&&) = delete;
   module_builder& operator=(const module_builder) = delete;
 
-  static module_builder* current_builder() {
-
-  }
-
   template<typename FunctionType, typename FunctionBuilder>
   auto create_function(std::string const& name, FunctionBuilder&& fb);
 
@@ -158,7 +155,9 @@ public:
   }
 
 private:
-  void set_function_attributes(llvm::Function* func) {}
+  void set_function_attributes(llvm::Function* fn) {
+    fn->addFnAttr("target-cpu", LLVMGetHostCPUName());
+  }
 
   void declare_external_symbol(std::string const& name, void* address) {
     compiler_->add_symbol(name, address);

@@ -27,15 +27,17 @@ namespace codegen {
 template<typename ReturnType, typename... Arguments> class function_ref;
 
 class module {
-  llvm::orc::ExecutionSession* session_;
-
   llvm::orc::MangleAndInterner mangle_;
 
 private:
   module(llvm::orc::ExecutionSession& session, llvm::DataLayout const& dl)
-    : session_(&session), mangle_(session, dl) { }
+    : mangle_(session, dl) { }
 
-  void* get_address(std::string const& address) {}
+  void* get_address(std::string const& address) {
+    //auto address = unwrap(session_->lookup({&session_->getMainJITDylib()}, mangle_(name))).getAddress();
+    //return reinterpret_cast<void*>(address);
+    return nullptr;
+  }
 
   friend class module_builder;
 
