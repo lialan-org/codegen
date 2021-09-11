@@ -124,10 +124,9 @@ namespace codegen::detail {
 
 // `typename` here could be change to LLVMType but that would cause clang to complain because LLVMType is
 // more specialized.
-template<typename> struct type;
 
-template<Integral Type>
-struct type<Type> {
+template<typename Type>
+struct type {
   static constexpr size_t alignment = alignof(Type);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(
@@ -137,16 +136,16 @@ struct type<Type> {
   static std::string name() { return fmt::format("{}{}", std::is_signed_v<Type> ? 'i' : 'u', sizeof(Type) * 8); }
 };
 
-template<Void Type>
-struct type<Type> {
+template<>
+struct type<void> {
   static constexpr size_t alignment = 0;
   static llvm::DIType* dbg() { return nullptr; }
   static llvm::Type* llvm() { return llvm::Type::getVoidTy(*current_builder->context_); }
   static std::string name() { return "void"; }
 };
 
-template<Bool Type>
-struct type<Type> {
+template<>
+struct type<bool> {
   static constexpr size_t alignment = alignof(bool);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(name(), 8, llvm::dwarf::DW_ATE_boolean);
@@ -155,8 +154,8 @@ struct type<Type> {
   static std::string name() { return "bool"; }
 };
 
-template<Byte Type>
-struct type<Type> {
+template<>
+struct type<std::byte> {
   static constexpr size_t alignment = 1;
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(name(), 8, llvm::dwarf::DW_ATE_unsigned);
@@ -165,8 +164,8 @@ struct type<Type> {
   static std::string name() { return "byte"; }
 };
 
-template<Float Type>
-struct type<Type> {
+template<>
+struct type<float> {
   static constexpr size_t alignment = alignof(float);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(name(), 32, llvm::dwarf::DW_ATE_float);
@@ -175,8 +174,8 @@ struct type<Type> {
   static std::string name() { return "f32"; }
 };
 
-template<Double Type>
-struct type<Type> {
+template<>
+struct type<double> {
   static constexpr size_t alignment = alignof(double);
   static llvm::DIType* dbg() {
     return current_builder->dbg_builder_.createBasicType(name(), 64, llvm::dwarf::DW_ATE_float);
