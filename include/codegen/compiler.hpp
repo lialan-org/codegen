@@ -75,7 +75,8 @@ private:
       compile_layer_(session_, object_layer_, std::make_unique<llvm::orc::SimpleCompiler>(*target_machine_)),
       optimize_layer_(session_, compile_layer_, compiler::optimize_module),
       gdb_listener_(llvm::JITEventListener::createGDBRegistrationListener()),
-      main_jd_(session_.createBareJITDylib("<main>"))
+      main_jd_(session_.createBareJITDylib("<main>")),
+      source_directory_(std::filesystem::temp_directory_path() / ("codegen_" + get_process_name() + ".txt"))
   {
     main_jd_.addGenerator(
         cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(data_layout_.getGlobalPrefix())));

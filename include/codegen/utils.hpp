@@ -27,6 +27,8 @@
 #include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include "os.hpp"
+
 namespace codegen {
 
 namespace detail {

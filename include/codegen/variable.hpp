@@ -91,7 +91,7 @@ public:
     auto idx = v.eval();
 
     if constexpr (sizeof(typename Value::value_type) < sizeof(uint64_t)) {
-      if constexpr (std::is_unsigned_v<Value::value_type>) {
+      if constexpr (std::is_unsigned_v<typename Value::value_type>) {
         idx = mb.ir_builder_.CreateZExt(idx, detail::type<uint64_t>::llvm());
       } else {
         idx = mb.ir_builder_.CreateSExt(idx, detail::type<int64_t>::llvm());
@@ -117,7 +117,7 @@ public:
     auto idx = idx_v.eval();
 
     if constexpr (sizeof(typename IndexValue::value_type) < sizeof(uint64_t)) {
-      if constexpr (std::is_unsigned_v<IndexValue::value_type>) {
+      if constexpr (std::is_unsigned_v<typename IndexValue::value_type>) {
         idx = mb.ir_builder_.CreateZExt(idx, detail::type<uint64_t>::llvm());
       } else {
         idx = mb.ir_builder_.CreateSExt(idx, detail::type<int64_t>::llvm());
