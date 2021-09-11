@@ -58,7 +58,7 @@ public:
   variable(variable&&) = delete;
 
   value<Type> get() const {
-    auto v = detail::current_builder->ir_builder_.CreateAlignedLoad(variable_, detail::type<Type>::alignment);
+    auto v = detail::current_builder->ir_builder_.CreateAlignedLoad(variable_, llvm::MaybeAlign(detail::type<Type>::alignment));
     return value<Type>{v, name_};
   }
 
@@ -67,7 +67,7 @@ public:
     auto& mb = *detail::current_builder;
     auto line_no = mb.source_code_.add_line(fmt::format("{} = {};", name_, v));
     mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
-    mb.ir_builder_.CreateAlignedStore(v.eval(), variable_, detail::type<Type>::alignment);
+    mb.ir_builder_.CreateAlignedStore(v.eval(), variable_, llvm::MaybeAlign(detail::type<Type>::alignment));
   }
 
   template<typename T = Type, typename Value>
@@ -102,7 +102,7 @@ public:
 
     auto temp_storage = mb.ir_builder_.CreateAlloca(detail::type<ElementType>::llvm(), nullptr, "temporary_storage");
 
-    auto load = mb.ir_builder_.CreateAlignedLoad(elem_ptr, detail::type<ElementType>::alignment);
+    auto load = mb.ir_builder_.CreateAlignedLoad(elem_ptr, llvm::MaybeAlign(detail::type<ElementType>::alignment));
 
     return value<std::remove_all_extents_t<T>>{load, "test_name"};
   }
@@ -125,7 +125,7 @@ public:
     }
 
     auto elem = mb.ir_builder_.CreateInBoundsGEP(variable_, idx);
-    mb.ir_builder_.CreateAlignedStore(value_v.eval(), idx, detail::type<typename Value::value_type>::alignment);
+    mb.ir_builder_.CreateAlignedStore(value_v.eval(), idx, llvm::MaybeAlign(detail::type<typename Value::value_type>::alignment));
     return std::move(value_v);
   }
 

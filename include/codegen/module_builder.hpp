@@ -149,8 +149,8 @@ public:
   }
 
   friend std::ostream& operator<<(std::ostream& os, module_builder const& mb) {
-    //auto llvm_os = llvm::raw_os_ostream(os);
-    //mb.module_->print(llvm_os, nullptr);
+    auto llvm_os = llvm::raw_os_ostream(os);
+    mb.module_->print(llvm_os, nullptr);
     return os;
   }
 

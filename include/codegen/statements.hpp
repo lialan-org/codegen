@@ -150,7 +150,7 @@ inline auto load(Pointer ptr) {
 
   auto line_no = mb.source_code_.add_line(fmt::format("{} = *{}", id, ptr));
   mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
-  auto v = mb.ir_builder_.CreateAlignedLoad(ptr.eval(), detail::type<value_type>::alignment);
+  auto v = mb.ir_builder_.CreateAlignedLoad(ptr.eval(), llvm::MaybeAlign(detail::type<value_type>::alignment));
 
   auto dbg_value =
       mb.dbg_builder_.createAutoVariable(mb.dbg_scope_, id, mb.dbg_file_, line_no, detail::type<value_type>::dbg());
@@ -173,7 +173,7 @@ inline void store(Value v, Pointer ptr) {
 
   auto line_no = mb.source_code_.add_line(fmt::format("*{} = {}", ptr, v));
   mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
-  mb.ir_builder_.CreateAlignedStore(v.eval(), ptr.eval(), detail::type<value_type>::alignment);
+  mb.ir_builder_.CreateAlignedStore(v.eval(), ptr.eval(), llvm::MaybeAlign(detail::type<value_type>::alignment));
 }
 
 template<typename ConditionFn, typename Body,
