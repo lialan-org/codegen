@@ -1,13 +1,4 @@
-#include "codegen/variable.hpp"
-
-#include "codegen/arithmetic_ops.hpp"
-#include "codegen/compiler.hpp"
-#include "codegen/literals.hpp"
-#include "codegen/module.hpp"
-#include "codegen/module_builder.hpp"
-#include "codegen/relational_ops.hpp"
-#include "codegen/statements.hpp"
-#include "codegen/builtin.hpp"
+#include "codegen/codegen.hpp"
 
 
 int32_t table1[][2] = {{0, 1}, {2, 3}, {4, 5}};
