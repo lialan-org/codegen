@@ -56,13 +56,12 @@ class compiler {
 
   llvm::JITEventListener* gdb_listener_;
 
-
+  llvm::orc::JITDylib &main_jd_;
   std::filesystem::path source_directory_;
 
   //std::vector<llvm::orc::VModuleKey> loaded_modules_;
 
   std::unordered_map<std::string, uintptr_t> external_symbols_;
-  llvm::orc::JITDylib &main_jd_;
 
   friend class module_builder;
 
@@ -91,7 +90,7 @@ public:
 
         auto tmb = cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
         tmb.setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive);
-        //tmb.setCPU(llvm::sys::getHostCPUName());
+        tmb.setCPU(LLVMGetHostCPUName());
         return tmb;
       }()) { }
 
