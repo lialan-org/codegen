@@ -8,21 +8,33 @@
 
 namespace codegen {
 
+template <class... T>
+constexpr bool always_false = false;
+
 template<typename T>
-concept IsPlainType = !std::is_const_v<T> && !std::is_volatile_v<T> && !std::is_reference_v<T>;
+concept SupportedLLVMType = requires (T t) {
+  codegen::detail::type<T>::value_type;
+};
+
+template<typename T>
+concept IsPlainType = !std::is_const_v<T> &&
+                      !std::is_volatile_v<T> &&
+                      !std::is_reference_v<T>;
 
 template<typename T>
 concept IsPointer = std::is_pointer_v<T> && IsPlainType<T>;
 
-//template<typename T>
-//concept SupportedLLVMType = requires (T t) {
-//};
+template<typename T>
+concept LLVMBoolType = IsPlainType<T> && std::same_as<T, bool>;
 
 template<typename T>
 concept LLVMVoidType = IsPlainType<T> && std::same_as<T, void>;
 
 template<typename T>
-concept LLVMIntegralType = IsPlainType<T> && std::is_integral_v<T>;
+concept LLVMIntegralType = IsPlainType<T> &&
+                           (std::is_integral_v<T> ||
+                           std::same_as<T, int8_t> ||
+                           std::same_as<T, uint8_t>);
 
 template<typename T>
 concept LLVMFloatingType = IsPlainType<T> && std::is_floating_point_v<T>;
@@ -132,11 +144,11 @@ namespace codegen::detail {
 
 inline llvm::Value* get_constant(LLVMPODType auto v) {
   using Type = decltype(v);
-  if constexpr (std::is_integral_v<Type>) {
+  if constexpr (LLVMIntegralType<Type>) {
     return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
-  } else if constexpr (std::is_floating_point_v<Type>) {
+  } else if constexpr (LLVMFloatingType<Type>) {
     return llvm::ConstantFP::get(*current_builder->context_, llvm::APFloat(v));
-  } else if constexpr (std::is_same_v<Type, bool>) {
+  } else if constexpr (LLVMBoolType<Type>) {
     return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(1, v, true));
   } else {
     llvm_unreachable("Unsupported type");
@@ -300,9 +312,8 @@ public:
 
 namespace codegen {
 
-template<typename Type>
-inline value<Type> constant(Type v) requires std::is_arithmetic_v<Type> &&
-                                             (!std::is_const_v<Type>) {
+template<LLVMArithmeticType Type>
+inline value<Type> constant(Type v) {
   return value<Type>{detail::get_constant<Type>(v), [&] {
                        if constexpr (std::same_as<Type, bool>) {
                          return v ? "true" : "false";
