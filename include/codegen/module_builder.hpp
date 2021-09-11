@@ -39,6 +39,7 @@
 #include <fmt/ostream.h>
 
 #include "compiler.hpp"
+#include "module.hpp"
 
 namespace codegen {
 
@@ -145,7 +146,7 @@ public:
     // TODO: use a custom resource tracker
     throw_on_error(compiler_->optimize_layer_.add(compiler_->getMainJITDylib().getDefaultResourceTracker(),
                                                   llvm::orc::ThreadSafeModule(std::move(module_), std::move(context_))));
-    return module{compiler_->session_, compiler_->data_layout_};
+    return module{compiler_->session_, compiler_->getMainJITDylib(), compiler_->data_layout_};
   }
 
   friend std::ostream& operator<<(std::ostream& os, module_builder const& mb) {

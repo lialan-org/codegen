@@ -38,8 +38,6 @@
 
 #include <llvm/IR/LegacyPassManager.h>
 
-
-#include "module.hpp"
 #include "utils.hpp"
 
 namespace codegen {
