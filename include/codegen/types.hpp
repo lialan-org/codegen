@@ -49,6 +49,9 @@ concept LLVMPODType = std::same_as<T, std::byte> ||
                       LLVMFloatingType<T>;
 
 template<typename T>
+concept LLVMBytePointerType = IsPointer<T> && std::same_as<std::remove_pointer_t<T>, std::byte>;
+
+template<typename T>
 concept LLVMIntegralPointerType = IsPointer<T> && LLVMIntegralType<std::remove_pointer_t<T>>;
 
 template<typename T>
@@ -58,15 +61,28 @@ template<typename T>
 concept LLVMVoidPointerType = IsPointer<T> && LLVMVoidType<std::remove_pointer_t<T>>;
 
 template<typename T>
-concept LLVMPointerType = LLVMIntegralPointerType<T> || LLVMFloatingPointerType<T> || LLVMVoidPointerType<T>;
+concept LLVMPointerPointerType = IsPointer<T> &&
+                                (LLVMIntegralPointerType<std::remove_pointer_t<T>> || 
+                                 LLVMFloatingPointerType<std::remove_pointer_t<T>> ||
+                                 LLVMVoidPointerType<std::remove_pointer_t<T>> ||
+                                 LLVMBytePointerType<std::remove_pointer_t<T>>);
+
+template<typename T>
+concept LLVMPointerType = LLVMIntegralPointerType<T> ||
+                          LLVMFloatingPointerType<T> ||
+                          LLVMVoidPointerType<T> ||
+                          LLVMBytePointerType<T> ||
+                          LLVMPointerPointerType<T>;
 
 template<typename T>
 concept LLVMArrayType = std::is_array_v<T> &&
-                        LLVMPODType<std::remove_all_extents_t<T>> &&
-                        std::extent_v<T> != 0;
+                        std::extent_v<T> != 0 &&
+                        LLVMPODType<std::remove_all_extents_t<T>>;
 
 template<typename T>
-concept LLVMType = LLVMPODType<T> || LLVMPointerType<T> || LLVMArrayType<T>;
+concept LLVMType = LLVMPODType<T> ||
+                   LLVMPointerType<T> ||
+                   LLVMArrayType<T>;
 
 template<typename T>
 concept LLVMTypeWrapper = requires (T t) {
@@ -83,10 +99,15 @@ concept ConditionType = std::is_same_v<typename std::decay_t<T>::value_type, boo
 template<typename S>
 concept Size = LLVMTypeWrapper<S> &&
               (std::is_same_v<typename S::value_type, int32_t> ||
-               std::is_same_v<typename S::value_type, int64_t>);
+               std::is_same_v<typename S::value_type, int64_t> ||
+               std::is_same_v<typename S::value_type, uint32_t> ||
+               std::is_same_v<typename S::value_type, uint64_t>);
 
 template<typename T>
 concept Integral = LLVMTypeWrapper<T> && std::is_integral_v<T>;
+
+template<typename T>
+concept IsArray = std::is_array_v<T> && LLVMType<std::remove_all_extents_t<T>>;
 
 template<typename T>
 concept Bool = requires (T t) {

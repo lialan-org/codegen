@@ -20,16 +20,9 @@
  * SOFTWARE.
  */
 
-#include "codegen/statements.hpp"
+#include "codegen/codegen.hpp"
 
 #include <gtest/gtest.h>
-
-#include "codegen/arithmetic_ops.hpp"
-#include "codegen/compiler.hpp"
-#include "codegen/module.hpp"
-#include "codegen/module_builder.hpp"
-#include "codegen/relational_ops.hpp"
-#include "codegen/variable.hpp"
 
 TEST(statements, if_condition) {
   auto comp = codegen::compiler{};

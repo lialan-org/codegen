@@ -22,11 +22,7 @@
 
 #include <gtest/gtest.h>
 
-#include "codegen/compiler.hpp"
-#include "codegen/literals.hpp"
-#include "codegen/module.hpp"
-#include "codegen/module_builder.hpp"
-#include "codegen/statements.hpp"
+#include "codegen/codegen.hpp"
 
 using namespace codegen::literals;
 

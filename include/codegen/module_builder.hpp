@@ -84,9 +84,17 @@ public: // FIXME: proper encapsulation
 
     void enter_scope() { indent_ += 4; }
     void leave_scope() { indent_ -= 4; }
+
     unsigned current_line() const { return line_no_; }
+
     std::string get() const {
       return source_code_.str();
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, source_code_generator const& scg) {
+      auto llvm_os = llvm::raw_os_ostream(os);
+      llvm_os << scg.get();
+      return os;
     }
   };
 
@@ -128,6 +136,10 @@ public:
 
   template<typename FunctionType> auto declare_external_function(std::string const& name, FunctionType* fn);
 
+  void dump_llvm_ir(llvm::raw_ostream& out) const {
+    module_->print(out, nullptr);
+  }
+
   [[nodiscard]] module build() && {
     {
       auto ofs = std::ofstream(source_file_, std::ios::trunc);
@@ -135,12 +147,12 @@ public:
     }
     dbg_builder_.finalize();
 
-    module_->print(llvm::errs(), nullptr);
+    dump_llvm_ir(llvm::errs());
 
     if (compiler_->compileModule(std::move(module_), std::move(context_))) {
       // TODO: clean up module builder.
     } else {
-      llvm_unreachable("Failed to compile"); // TODO: more error messages.
+      //llvm_unreachable("Failed to compile"); // TODO: more error messages.
     }
 
     return module{std::move(compiler_->lljit_), compiler_->mangle_};

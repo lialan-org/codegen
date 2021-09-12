@@ -20,14 +20,9 @@
  * SOFTWARE.
  */
 
-#include "codegen/arithmetic_ops.hpp"
+#include "codegen/codegen.hpp"
 
 #include <gtest/gtest.h>
-
-#include "codegen/compiler.hpp"
-#include "codegen/module.hpp"
-#include "codegen/module_builder.hpp"
-#include "codegen/statements.hpp"
 
 TEST(arithmetic_ops, signed_integer_arithmetic) {
   auto comp = codegen::compiler{};

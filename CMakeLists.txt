@@ -38,10 +38,10 @@ else()
   list(APPEND CODEGEN_CXX_FLAGS ${CODEGEN_CXX_RELEASE_FLAGS})
 endif()
 
-#set(CODEGEN_CXX_FILESYSTEM stdc++fs)
-#if(APPLE)
-#  set(CODEGEN_CXX_FILESYSTEM c++fs)
-#endif()
+set(CODEGEN_CXX_FILESYSTEM stdc++fs)
+if(APPLE)
+  set(CODEGEN_CXX_FILESYSTEM c++fs)
+endif()
 
 find_package(LLVM 12 REQUIRED)
 find_package(fmt REQUIRED)
@@ -62,8 +62,9 @@ target_link_libraries(codegen INTERFACE
   LLVMOrcJIT
   LLVMSupport
   fmt::fmt
-  #${CODEGEN_CXX_FILESYSTEM}
+  ${CODEGEN_CXX_FILESYSTEM}
 )
 
 add_subdirectory(t2)
+add_subdirectory(tests)
 

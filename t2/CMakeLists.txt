@@ -25,4 +25,4 @@ function(codegen_add_test TESTNAME SOURCE)
   target_compile_options(${TESTNAME} PRIVATE ${CODEGEN_CXX_FLAGS})
 endfunction(codegen_add_test)
 
-codegen_add_test(variable variable.cpp)
+codegen_add_test(hash_join hash_join.cpp)

@@ -60,8 +60,8 @@ public:
     return value<Type>{v, name_};
   }
 
-  template<typename Value>
-  void set(Value const& v) requires std::is_same_v<Type, typename Value::value_type> {
+  template<typename V>
+  void set(V const& v) requires IsValue<V> && std::same_as<Type, typename V::value_type> {
     auto& mb = *detail::current_builder;
     auto line_no = mb.source_code_.add_line(fmt::format("{} = {};", name_, v));
     mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
@@ -78,10 +78,8 @@ public:
   //Type *operator&() { }
 
   template<typename T = Type, typename Value>
-  typename std::enable_if_t<std::is_array_v<T> &&
-                            std::is_integral_v<typename Value::value_type>,
-	    value<std::remove_all_extents_t<T>>>
-  operator[](Value const& v) & {
+	value<std::remove_all_extents_t<T>>
+  operator[](Value const& v) & requires IsArray<T> && LLVMIntegralType<typename Value::value_type> {
     using ElementType = typename std::remove_all_extents_t<T>;
 
     auto& mb = *detail::current_builder;
@@ -106,11 +104,11 @@ public:
   }
 
   template<typename T = Type, typename IndexValue, typename Value>
-  typename std::enable_if_t<std::is_array_v<T> &&
-  std::is_integral_v<typename IndexValue::value_type> &&
-  std::is_same_v<std::remove_all_extents_t<T>, typename Value::value_type>,
-    value<std::remove_all_extents_t<T>>>
-  setElem(IndexValue const& idx_v, Value const&& value_v) {
+  value<std::remove_all_extents_t<T>>
+  setElem(IndexValue const& idx_v, Value const&& value_v)
+      requires IsArray<T> &&
+               LLVMIntegralType<typename IndexValue::value_type> && 
+               std::same_as<std::remove_all_extents_t<T>, typename Value::value_type>  {
     auto& mb = *detail::current_builder;
     auto idx = idx_v.eval();
 

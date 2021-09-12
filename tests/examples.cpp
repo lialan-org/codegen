@@ -24,21 +24,13 @@
 
 #include <gtest/gtest.h>
 
-#include "codegen/arithmetic_ops.hpp"
-#include "codegen/builtin.hpp"
-#include "codegen/compiler.hpp"
-#include "codegen/literals.hpp"
-#include "codegen/module.hpp"
-#include "codegen/module_builder.hpp"
-#include "codegen/relational_ops.hpp"
-#include "codegen/statements.hpp"
-#include "codegen/variable.hpp"
+#include "codegen/codegen.hpp"
 
 namespace cg = codegen;
 using namespace cg::literals;
 
 template<typename T>
-size_t less_cmp(cg::value<std::byte const*> a_ptr, cg::value<std::byte const*> b_ptr, size_t off) {
+size_t less_cmp(cg::value<std::byte*> a_ptr, cg::value<std::byte*> b_ptr, size_t off) {
   auto a_val = cg::load(cg::bit_cast<T*>(a_ptr + cg::constant<uint64_t>(off)));
   auto b_val = cg::load(cg::bit_cast<T*>(b_ptr + cg::constant<uint64_t>(off)));
   cg::if_(a_val < b_val, [&] { cg::return_(cg::true_()); });
@@ -49,8 +41,8 @@ size_t less_cmp(cg::value<std::byte const*> a_ptr, cg::value<std::byte const*> b
 TEST(examples, tuple_i32f32u16_less) {
   auto comp = codegen::compiler{};
   auto builder = codegen::module_builder(comp, "tuple_i32f32u16_less");
-  auto less = builder.create_function<bool(std::byte const*, std::byte const*)>(
-      "less", [&](cg::value<std::byte const*> a_ptr, cg::value<std::byte const*> b_ptr) {
+  auto less = builder.create_function<bool(std::byte*, std::byte*)>(
+      "less", [&](cg::value<std::byte*> a_ptr, cg::value<std::byte*> b_ptr) {
         size_t offset = 0;
         offset = less_cmp<int32_t>(a_ptr, b_ptr, offset);
         offset = less_cmp<float>(a_ptr, b_ptr, offset);
@@ -90,8 +82,8 @@ TEST(examples, tuple_i32str_less) {
         cg::return_(b);
       });
 
-  auto less = builder.create_function<bool(std::byte const*, std::byte const*)>(
-      "less", [&](cg::value<std::byte const*> a_ptr, cg::value<std::byte const*> b_ptr) {
+  auto less = builder.create_function<bool(std::byte*, std::byte*)>(
+      "less", [&](cg::value<std::byte*> a_ptr, cg::value<std::byte*> b_ptr) {
         size_t offset = 0;
         offset = less_cmp<int32_t>(a_ptr, b_ptr, offset);
 
@@ -133,8 +125,11 @@ TEST(examples, tuple_i32str_less) {
 TEST(examples, soa_compute) {
   auto comp = codegen::compiler{};
   auto builder = codegen::module_builder(comp, "soa_compute");
-  auto compute = builder.create_function<void(int32_t, int32_t const*, int32_t const*, int32_t*, uint64_t)>(
-      "compute", [&](cg::value<int32_t> a, cg::value<int32_t const*> b_ptr, cg::value<int32_t const*> c_ptr,
+  // TODO: enable `const` qualifier in type system so we can avoid copying lvalues.
+  // such as:
+  // auto compute = builder.create_function<void(int32_t, int32_t const*, int32_t const*, int32_t const*, uint64_t)>
+  auto compute = builder.create_function<void(int32_t, int32_t*, int32_t*, int32_t*, uint64_t)>(
+      "compute", [&](cg::value<int32_t> a, cg::value<int32_t*> b_ptr, cg::value<int32_t*> c_ptr,
                      cg::value<int32_t*> d_ptr, cg::value<uint64_t> n) {
         auto idx = cg::variable<uint64_t>("idx", 0_u64);
         cg::while_([&] { return idx.get() < n; },
@@ -150,15 +145,20 @@ TEST(examples, soa_compute) {
   auto compute_ptr = module.get_address(compute);
   compute_ptr(0, nullptr, nullptr, nullptr, 0);
 
-  auto test = [&](int32_t a, std::vector<int32_t> const& b, std::vector<int32_t> const& c) {
+  auto test = [&](int32_t a, std::vector<int32_t> &b, std::vector<int32_t> &c) {
     EXPECT_EQ(b.size(), c.size());
     auto d = std::make_unique<int32_t[]>(b.size());
     compute_ptr(a, b.data(), c.data(), d.get(), b.size());
     for (auto i = 0u; i < b.size(); i++) { EXPECT_EQ(d[i], a * b[i] + c[i]); }
   };
 
-  test(2, {1, 2, 3, 4, 5, 6}, {11, 12, 13, 14, 15, 16});
-  test(5, {-8, 5, -4, 3, -10, 11}, {0, 8, 3, -9, 4, 2});
+  std::vector<int32_t> b_{1, 2, 3, 4, 5, 6};
+  std::vector<int32_t> c_{11, 12, 13, 14, 15, 16};
+  test(2, b_, c_);
+
+  std::vector<int32_t> d_{-8, 5, -4, 3, -10, 11};
+  std::vector<int32_t> e_{0, 8, 3, -9, 4, 2};
+  test(5, d_, e_);
 
   auto gen = std::default_random_engine{std::random_device{}()};
   auto dist = std::uniform_int_distribution<int32_t>(-10000, 10000);
@@ -167,7 +167,7 @@ TEST(examples, soa_compute) {
   auto c = std::vector<int32_t>();
   std::generate_n(std::back_inserter(b), 1000000, [&] { return dist(gen); });
   std::generate_n(std::back_inserter(c), 1000000, [&] { return dist(gen); });
-  test(dist(gen), std::move(b), std::move(c));
+  test(dist(gen), b, c);
 }
 
 TEST(examples, trivial_if) {

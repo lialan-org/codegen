@@ -158,45 +158,44 @@ public:
 
 
 template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator+(LHS lhs, RHS rhs) requires std::same_as<LHS, RHS> {
+auto operator+(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::add, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
 template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator-(LHS lhs, RHS rhs) requires std::same_as<LHS, RHS> {
+auto operator-(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::sub, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
 template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator*(LHS lhs, RHS rhs) requires std::same_as<LHS, RHS> {
+auto operator*(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::mul, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
 template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator/(LHS lhs, RHS rhs) requires std::same_as<LHS, RHS> {
+auto operator/(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::div, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
 template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator%(LHS lhs, RHS rhs) requires std::same_as<typename detail::type<decltype(lhs)>::value_type,
-                                                                 typename detail::type<decltype(rhs)>::value_type> {
+auto operator%(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::mod, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
 template<IntegralValue LHS, IntegralValue RHS>
-auto operator&(LHS lhs, RHS rhs) requires std::same_as<LHS, RHS> {
+auto operator&(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::and_, LHS, RHS>(std::move(lhs),
                                                                                          std::move(rhs));
 }
 
 template<IntegralValue LHS, IntegralValue RHS>
-auto operator|(LHS lhs, RHS rhs) requires std::same_as<LHS, RHS> {
+auto operator|(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::or_, LHS, RHS>(std::move(lhs),
                                                                                         std::move(rhs));
 }
 
 template<IntegralValue LHS, IntegralValue RHS>
-auto operator^(LHS lhs, RHS rhs) requires std::same_as<LHS, RHS> {
+auto operator^(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::xor_, LHS, RHS>(std::move(lhs),
                                                                                          std::move(rhs));
 }

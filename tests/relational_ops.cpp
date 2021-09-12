@@ -20,13 +20,9 @@
  * SOFTWARE.
  */
 
-#include "codegen/relational_ops.hpp"
+#include "codegen/codegen.hpp"
 
 #include <gtest/gtest.h>
-
-#include "codegen/compiler.hpp"
-#include "codegen/module.hpp"
-#include "codegen/module_builder.hpp"
 
 TEST(relational_ops, signed_integer) {
   auto comp = codegen::compiler{};
