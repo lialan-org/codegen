@@ -128,8 +128,8 @@ TEST(examples, soa_compute) {
   // TODO: enable `const` qualifier in type system so we can avoid copying lvalues.
   // such as:
   // auto compute = builder.create_function<void(int32_t, int32_t const*, int32_t const*, int32_t const*, uint64_t)>
-  auto compute = builder.create_function<void(int32_t, int32_t*, int32_t*, int32_t*, uint64_t)>(
-      "compute", [&](cg::value<int32_t> a, cg::value<int32_t*> b_ptr, cg::value<int32_t*> c_ptr,
+  auto compute = builder.create_function<void(int32_t, int32_t const*, int32_t const*, int32_t*, uint64_t)>(
+      "compute", [&](cg::value<int32_t> a, cg::value<int32_t const*> b_ptr, cg::value<int32_t const*> c_ptr,
                      cg::value<int32_t*> d_ptr, cg::value<uint64_t> n) {
         auto idx = cg::variable<uint64_t>("idx", 0_u64);
         cg::while_([&] { return idx.get() < n; },
@@ -145,7 +145,7 @@ TEST(examples, soa_compute) {
   auto compute_ptr = module.get_address(compute);
   compute_ptr(0, nullptr, nullptr, nullptr, 0);
 
-  auto test = [&](int32_t a, std::vector<int32_t> &b, std::vector<int32_t> &c) {
+  auto test = [&](int32_t a, std::vector<int32_t> const &b, std::vector<int32_t> const &c) {
     EXPECT_EQ(b.size(), c.size());
     auto d = std::make_unique<int32_t[]>(b.size());
     compute_ptr(a, b.data(), c.data(), d.get(), b.size());
@@ -154,11 +154,11 @@ TEST(examples, soa_compute) {
 
   std::vector<int32_t> b_{1, 2, 3, 4, 5, 6};
   std::vector<int32_t> c_{11, 12, 13, 14, 15, 16};
-  test(2, b_, c_);
+  test(2, std::move(b_), std::move(c_));
 
   std::vector<int32_t> d_{-8, 5, -4, 3, -10, 11};
   std::vector<int32_t> e_{0, 8, 3, -9, 4, 2};
-  test(5, d_, e_);
+  test(5, std::move(d_), std::move(e_));
 
   auto gen = std::default_random_engine{std::random_device{}()};
   auto dist = std::uniform_int_distribution<int32_t>(-10000, 10000);

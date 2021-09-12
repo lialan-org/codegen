@@ -17,8 +17,7 @@ concept SupportedLLVMType = requires (T t) {
 };
 
 template<typename T>
-concept IsPlainType = !std::is_const_v<T> &&
-                      !std::is_volatile_v<T> &&
+concept IsPlainType = !std::is_volatile_v<T> &&
                       !std::is_reference_v<T>;
 
 template<typename T>
