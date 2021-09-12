@@ -133,19 +133,17 @@ public:
       auto ofs = std::ofstream(source_file_, std::ios::trunc);
       ofs << source_code_.get();
     }
-
     dbg_builder_.finalize();
 
     module_->print(llvm::errs(), nullptr);
 
-    auto target_triple = compiler_->target_machine_->getTargetTriple();
-    module_->setDataLayout(compiler_->data_layout_);
-    module_->setTargetTriple(target_triple.str());
+    if (compiler_->compileModule(std::move(module_), std::move(context_))) {
+      // TODO: clean up module builder.
+    } else {
+      llvm_unreachable("Failed to compile"); // TODO: more error messages.
+    }
 
-    // TODO: use a custom resource tracker
-    throw_on_error(compiler_->optimize_layer_.add(compiler_->getMainJITDylib().getDefaultResourceTracker(),
-                                                  llvm::orc::ThreadSafeModule(std::move(module_), std::move(context_))));
-    return module{compiler_->session_, compiler_->getMainJITDylib(), compiler_->data_layout_};
+    return module{std::move(compiler_->lljit_), compiler_->mangle_};
   }
 
   friend std::ostream& operator<<(std::ostream& os, module_builder const& mb) {

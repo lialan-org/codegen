@@ -36,6 +36,8 @@
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+
 #include <llvm/IR/LegacyPassManager.h>
 
 #include "utils.hpp"
@@ -46,20 +48,16 @@ class compiler {
   llvm::orc::ExecutionSession session_;
 
   llvm::DataLayout data_layout_;
-  std::unique_ptr<llvm::TargetMachine> target_machine_;
+
+  std::unique_ptr<llvm::orc::LLJIT> lljit_;
 
   llvm::orc::MangleAndInterner mangle_;
 
-  llvm::orc::RTDyldObjectLinkingLayer object_layer_;
-  llvm::orc::IRCompileLayer compile_layer_;
-  llvm::orc::IRTransformLayer optimize_layer_;
-
   llvm::JITEventListener* gdb_listener_;
 
-  llvm::orc::JITDylib &main_jd_;
   std::filesystem::path source_directory_;
 
-  //std::vector<llvm::orc::VModuleKey> loaded_modules_;
+  std::vector<llvm::JITEventListener::ObjectKey> loaded_modules_;
 
   std::unordered_map<std::string, uintptr_t> external_symbols_;
 
@@ -68,17 +66,38 @@ class compiler {
 private:
   explicit compiler(llvm::orc::JITTargetMachineBuilder tmb)
     : data_layout_(cantFail(tmb.getDefaultDataLayoutForTarget())),
-      target_machine_(cantFail(tmb.createTargetMachine())),
       mangle_(session_, data_layout_),
-      object_layer_(session_, [] { return std::make_unique<llvm::SectionMemoryManager>(); }),
-      compile_layer_(session_, object_layer_, std::make_unique<llvm::orc::SimpleCompiler>(*target_machine_)),
-      optimize_layer_(session_, compile_layer_, compiler::optimize_module),
       gdb_listener_(llvm::JITEventListener::createGDBRegistrationListener()),
-      main_jd_(session_.createBareJITDylib("<main>")),
       source_directory_(std::filesystem::temp_directory_path() / ("codegen_" + get_process_name() + ".txt"))
   {
-    main_jd_.addGenerator(
-        cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(data_layout_.getGlobalPrefix())));
+    auto jtmb = cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
+    lljit_ = cantFail((llvm::orc::LLJITBuilder()
+                        .setJITTargetMachineBuilder(std::move(jtmb)) 
+                        .setObjectLinkingLayerCreator([&](llvm::orc::ExecutionSession &ES,
+                                                          const llvm::Triple &TT) {
+                            auto GetMemMgr = []() {
+                              return std::make_unique<llvm::SectionMemoryManager>();
+                            };
+                            auto ObjLinkingLayer =
+                              std::make_unique<llvm::orc::RTDyldObjectLinkingLayer>(
+                              ES, std::move(GetMemMgr));
+
+                            // Register the event listener.
+                            ObjLinkingLayer->registerJITEventListener(
+                              *llvm::JITEventListener::createGDBRegistrationListener());
+
+                            // Make sure the debug info sections aren't stripped.
+                            ObjLinkingLayer->setProcessAllSections(true);
+                            return ObjLinkingLayer;})
+                        .create()));
+
+    lljit_->getMainJITDylib().addGenerator(
+        cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+                              data_layout_.getGlobalPrefix(),
+                              [MainName = mangle_("main")](const llvm::orc::SymbolStringPtr &Name) {
+                                return Name != MainName;
+                              })));
+
     std::filesystem::create_directories(source_directory_);
   }
 
@@ -88,23 +107,26 @@ public:
         LLVMInitializeNativeTarget();
         LLVMInitializeNativeAsmPrinter();
 
-        auto tmb = cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
-        tmb.setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive);
-        tmb.setCPU(LLVMGetHostCPUName());
-        return tmb;
+        return cantFail(llvm::orc::JITTargetMachineBuilder::detectHost())
+        .setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive)
+        .setCPU(LLVMGetHostCPUName());
       }()) { }
 
   ~compiler() {
-    //for (auto vk : loaded_modules_) { gdb_listener_->notifyFreeingObject(vk); }
+    for (auto vk : loaded_modules_) { gdb_listener_->notifyFreeingObject(vk); }
     std::filesystem::remove_all(source_directory_);
   }
 
   compiler(compiler const&) = delete;
   compiler(compiler&&) = delete;
 
-  void add_symbol(std::string const& name, void* address) {}
+  void add_symbol(std::string const& name, void* address) {
+    //external_symbols_[*mangle_(name)] = reinterpret_cast<uintptr_t>(address);
+  }
 
-  llvm::orc::JITDylib &getMainJITDylib() { return main_jd_; }
+  llvm::Error compileModule(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::LLVMContext> context) {
+    return lljit_->addIRModule(llvm::orc::ThreadSafeModule(std::move(module), std::move(context)));
+  }
 
 private:
   llvm::Expected<llvm::orc::ThreadSafeModule>
