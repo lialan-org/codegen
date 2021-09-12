@@ -103,8 +103,6 @@ public: // FIXME: proper encapsulation
   llvm::DIFile* dbg_file_;
   llvm::DIScope* dbg_scope_;
 
-
-
 public:
   module_builder(compiler& c, std::string const& name)
     : compiler_(&c),
