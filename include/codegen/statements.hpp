@@ -126,13 +126,14 @@ inline value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, 
 
   auto& mb = *detail::current_builder;
 
-  auto str = std::stringstream{};
-  str << fn.name() << "_ret = " << fn.name() << "(";
-  (void)(str << ... << fmt::format("{}, ", args));
-  str << ");";
-  auto line_no = mb.source_code_.add_line(str.str());
-
-  mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+  {
+    auto str = std::stringstream{};
+    str << fn.name() << "_ret = " << fn.name() << "(";
+    (void)(str << ... << fmt::format("{}, ", args));
+    str << ");";
+    auto line_no = mb.source_code_.add_line(str.str());
+    mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+  }
 
   auto values = std::vector<llvm::Value*>{};
   [[maybe_unused]] auto _ = {0, ((values.emplace_back(args.eval())), 0)...};

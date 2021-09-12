@@ -26,7 +26,7 @@ int64_t probe_hashmap(int32_t i) {
     probe_results.push_back(table1_index);
     ++counter;
   }
-  printf("\n   Total found: %lld\n", counter);
+  printf("\n   Total found: %ld\n", counter);
   return counter;
 }
 
@@ -42,8 +42,9 @@ void print_probe(int x, int y) {
   printf("    Found join: <%d, %d>\n", x, y);
 }
 
-int main() {
-  /*
+int main(int argc, char *argv[]) {
+  INIT_LLVM_ENV(argc, argv);
+
   auto comp = codegen::compiler{};
   auto builder = codegen::module_builder(comp, "hash_join");
 
@@ -70,7 +71,9 @@ int main() {
                         });
         codegen::return_();
       });
+  auto module = std::move(builder).build();
 
+  /*
   auto probe_phase = builder.create_function<void(int32_t*, int32_t)>(
       "probe_", [&](codegen::value<int32_t*> table, codegen::value<int32_t> s) {
         auto offset = codegen::variable<uint64_t>("offset", 0_u64);
