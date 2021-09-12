@@ -138,6 +138,23 @@ public:
   friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
 };
 
+template<typename T>
+concept IsValue = requires (T t) {
+  detail::is_instance<T, value>{};
+};
+
+template<typename T>
+concept IntegralValue = IsValue<T> && LLVMIntegralType<typename T::value_type>;
+
+template<typename T>
+concept FloatingValue = IsValue<T> && LLVMFloatingType<typename T::value_type>;
+
+template<typename T>
+concept PointerValue = IsValue<T> && LLVMPointerType<typename T::value_type>;
+
+template<typename T>
+concept ArithmeticValue = IsValue<T> && LLVMArithmeticType<typename T::value_type>;
+
 } // namespace codegen
 
 namespace codegen::detail {

@@ -2,6 +2,14 @@
 
 namespace codegen::detail {
 
+// helper function
+// https://stackoverflow.com/questions/44012938/how-to-tell-if-template-type-is-an-instance-of-a-template-class
+template <class, template <class> class>
+struct is_instance : public std::false_type {};
+
+template <class T, template <class> class U>
+struct is_instance<U<T>, U> : public std::true_type {};
+
 // `typename` here could be change to LLVMType but that would cause clang to complain because LLVMType is
 // more specialized.
 
