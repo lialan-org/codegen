@@ -71,9 +71,7 @@ int main(int argc, char *argv[]) {
                         });
         codegen::return_();
       });
-  auto module = std::move(builder).build();
 
-  /*
   auto probe_phase = builder.create_function<void(int32_t*, int32_t)>(
       "probe_", [&](codegen::value<int32_t*> table, codegen::value<int32_t> s) {
         auto offset = codegen::variable<uint64_t>("offset", 0_u64);
@@ -111,5 +109,4 @@ int main(int argc, char *argv[]) {
   set_get_ptr((int32_t*)table1, 3);
   auto probe_ptr = module.get_address(probe_phase);
   probe_ptr((int32_t*)table2, 3);
-  */
 }
