@@ -57,10 +57,6 @@ class compiler {
 
   std::filesystem::path source_directory_;
 
-  std::vector<llvm::JITEventListener::ObjectKey> loaded_modules_;
-
-  std::unordered_map<std::string, uintptr_t> external_symbols_;
-
   friend class module_builder;
 
 private:
@@ -92,6 +88,7 @@ private:
                         .create()));
 
     lljit_->getMainJITDylib().addGenerator(
+        // TODO: should we expose all symbols to JIT?
         cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
                               data_layout_.getGlobalPrefix(),
                               [MainName = mangle_("main")](const llvm::orc::SymbolStringPtr &Name) {
@@ -103,17 +100,10 @@ private:
 
 public:
   compiler()
-    : compiler([] {
-        LLVMInitializeNativeTarget();
-        LLVMInitializeNativeAsmPrinter();
-
-        return cantFail(llvm::orc::JITTargetMachineBuilder::detectHost())
-        .setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive)
-        .setCPU(LLVMGetHostCPUName());
-      }()) { }
+    : compiler(cantFail(llvm::orc::JITTargetMachineBuilder::detectHost()))
+    { }
 
   ~compiler() {
-    for (auto vk : loaded_modules_) { gdb_listener_->notifyFreeingObject(vk); }
     std::filesystem::remove_all(source_directory_);
   }
 
@@ -121,7 +111,9 @@ public:
   compiler(compiler&&) = delete;
 
   void add_symbol(std::string const& name, void* address) {
-    //external_symbols_[*mangle_(name)] = reinterpret_cast<uintptr_t>(address);
+    cantFail(lljit_->getMainJITDylib().define(llvm::orc::absoluteSymbols(
+      {{lljit_->mangleAndIntern(std::move(name)), llvm::JITEvaluatedSymbol::fromPointer(address)}}
+    )));
   }
 
   llvm::Error compileModule(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::LLVMContext> context) {
