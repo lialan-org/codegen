@@ -33,6 +33,7 @@
 #include <llvm/IR/DebugInfoMetadata.h>
 
 #include <llvm/Support/raw_os_ostream.h>
+#include <llvm/Support/Host.h>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -166,7 +167,7 @@ public:
 
 private:
   void set_function_attributes(llvm::Function* fn) {
-    fn->addFnAttr("target-cpu", LLVMGetHostCPUName());
+    fn->addFnAttr("target-cpu", llvm::sys::getHostCPUName());
   }
 
   void declare_external_symbol(std::string const& name, void* address) {
