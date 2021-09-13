@@ -36,11 +36,6 @@ private:
       mangle_(std::move(mangle))
   { }
 
-  //void* get_address(std::string const& name) {
-  //  auto entry_pointer = cantFail(lljit_->lookup(name));
-  //  return llvm::jitTargetAddressToFunction<void*>(entry_pointer.getAddress());
-  //}
-
   friend class module_builder;
 
 public:
