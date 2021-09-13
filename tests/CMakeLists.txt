@@ -28,6 +28,7 @@ function(codegen_add_test TESTNAME SOURCE)
   add_test(${TESTNAME} ${TESTNAME})
 endfunction(codegen_add_test)
 
+codegen_add_test(hash_join hash_join.cpp)
 codegen_add_test(builtin builtin.cpp)
 codegen_add_test(arithmetic_ops arithmetic_ops.cpp)
 codegen_add_test(examples examples.cpp)

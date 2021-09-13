@@ -43,3 +43,9 @@ TEST(variable, set_get) {
   auto set_get_ptr = module.get_address(set_get);
   EXPECT_EQ(set_get_ptr(8), 13);
 }
+
+int main(int argc, char** argv) {
+  INIT_LLVM_ENV(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

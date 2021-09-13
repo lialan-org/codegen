@@ -15,7 +15,10 @@
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/TargetSelect.h>
 
-#define INIT_LLVM_ENV(argc, argv)           \
-  llvm::InitLLVM x(argc, argv);             \
+#define INIT_LLVM_TARGET()                  \
   llvm::InitializeNativeTarget();           \
   llvm::InitializeNativeTargetAsmPrinter()
+
+#define INIT_LLVM_ENV(argc, argv)           \
+  llvm::InitLLVM x(argc, argv);             \
+  INIT_LLVM_TARGET()

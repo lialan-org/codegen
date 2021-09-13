@@ -128,3 +128,9 @@ TEST(module_builder, cast) {
   auto u16_to_u64_ptr = module.get_address(u16_to_u64);
   EXPECT_EQ(u16_to_u64_ptr(-1), 0xffff);
 }
+
+int main(int argc, char** argv) {
+  INIT_LLVM_ENV(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

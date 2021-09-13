@@ -39,6 +39,7 @@
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Support/TargetSelect.h>
 
 #include "utils.hpp"
 
@@ -101,7 +102,8 @@ private:
 public:
   compiler()
     : compiler(cantFail(llvm::orc::JITTargetMachineBuilder::detectHost()))
-    { }
+    {
+    }
 
   ~compiler() {
     std::filesystem::remove_all(source_directory_);

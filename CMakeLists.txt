@@ -65,6 +65,5 @@ target_link_libraries(codegen INTERFACE
   ${CODEGEN_CXX_FILESYSTEM}
 )
 
-add_subdirectory(t2)
 add_subdirectory(tests)
 

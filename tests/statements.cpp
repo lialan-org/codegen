@@ -225,3 +225,9 @@ TEST(statements, while_loop_break) {
   auto while_loop_break_ptr = module.get_address(while_loop_break);
   EXPECT_EQ(while_loop_break_ptr(6), 12);
 }
+
+int main(int argc, char** argv) {
+  INIT_LLVM_ENV(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

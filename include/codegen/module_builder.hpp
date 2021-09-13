@@ -148,8 +148,6 @@ public:
     }
     dbg_builder_.finalize();
 
-    dump_llvm_ir(llvm::errs());
-
     if (compiler_->compileModule(std::move(module_), std::move(context_))) {
       // TODO: clean up module builder.
     } else {

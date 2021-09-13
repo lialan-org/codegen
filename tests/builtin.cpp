@@ -68,3 +68,9 @@ TEST(builtin, bswap) {
   auto bswap_i32_ptr = module.get_address(bswap_i32);
   EXPECT_EQ(bswap_i32_ptr(0x12345678), 0x78563412);
 }
+
+int main(int argc, char** argv) {
+  INIT_LLVM_ENV(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

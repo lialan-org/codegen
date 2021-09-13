@@ -219,3 +219,9 @@ TEST(relational_ops, floating_point) {
   EXPECT_EQ(lt2_ptr(-1, -3), false);
   EXPECT_EQ(lt2_ptr(-5, -4), true);
 }
+
+int main(int argc, char** argv) {
+  INIT_LLVM_ENV(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

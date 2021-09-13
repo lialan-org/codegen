@@ -203,3 +203,9 @@ auto silly_function2 = builder.create_function<unsigned(unsigned)>("silly_functi
   EXPECT_EQ(fn(100), 100);
   EXPECT_EQ(fn(123), 123);
 }
+
+int main(int argc, char** argv) {
+  INIT_LLVM_ENV(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

@@ -204,3 +204,9 @@ TEST(arithmetic_ops, pointer_arithmetic) {
   auto sub_ptr = module.get_address(sub);
   EXPECT_EQ(sub_ptr(&values[3], 2), 1);
 }
+
+int main(int argc, char** argv) {
+  INIT_LLVM_ENV(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
