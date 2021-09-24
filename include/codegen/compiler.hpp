@@ -121,32 +121,6 @@ public:
   llvm::Error compileModule(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::LLVMContext> context) {
     return lljit_->addIRModule(llvm::orc::ThreadSafeModule(std::move(module), std::move(context)));
   }
-
-private:
-  llvm::Expected<llvm::orc::ThreadSafeModule>
-  inline static optimize_module(llvm::orc::ThreadSafeModule TSM, llvm::orc::MaterializationResponsibility const &R) {
-    TSM.withModuleDo([](llvm::Module &M) {
-      // Create a function pass manager.
-      auto FPM = std::make_unique<llvm::legacy::FunctionPassManager>(&M);
-
-      // Add some optimizations.
-      //FPM->add(createInstructionCombiningPass());
-      //FPM->add(createReassociatePass());
-      //FPM->add(createGVNPass());
-      //FPM->add(createCFGSimplificationPass());
-      FPM->doInitialization();
-
-      // Run the optimizations over all functions in the module being added to
-      // the JIT.
-      for (auto &F : M) {
-        FPM->run(F);
-      }
-
-      FPM->doFinalization();
-    });
-
-    return std::move(TSM);
-  }
 };
 
 } // namespace codegen
