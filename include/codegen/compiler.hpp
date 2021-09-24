@@ -61,11 +61,11 @@ class compiler {
   friend class module_builder;
 
 private:
-  explicit compiler(llvm::orc::JITTargetMachineBuilder tmb)
+  explicit compiler(std::string const &context_name, llvm::orc::JITTargetMachineBuilder tmb)
     : data_layout_(cantFail(tmb.getDefaultDataLayoutForTarget())),
       mangle_(session_, data_layout_),
       gdb_listener_(llvm::JITEventListener::createGDBRegistrationListener()),
-      source_directory_(std::filesystem::temp_directory_path() / ("codegen_" + get_process_name() + ".txt"))
+      source_directory_(std::filesystem::temp_directory_path() / ("codegen_" + context_name))
   {
     auto jtmb = cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
     lljit_ = cantFail((llvm::orc::LLJITBuilder()
@@ -100,8 +100,8 @@ private:
   }
 
 public:
-  compiler()
-    : compiler(cantFail(llvm::orc::JITTargetMachineBuilder::detectHost()))
+  compiler(std::string context_name = "codegen")
+    : compiler(context_name, cantFail(llvm::orc::JITTargetMachineBuilder::detectHost()))
     {
     }
 
