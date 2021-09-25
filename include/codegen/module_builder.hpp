@@ -77,15 +77,15 @@ public: // FIXME: proper encapsulation
     unsigned line_no_ = 1;
     unsigned indent_ = 0;
 
+    std::filesystem::path source_file_;
     llvm::Module &module_;
     llvm::DIBuilder dbg_builder_;
     llvm::DIFile* dbg_file_;
     llvm::DIScope* dbg_scope_;
 
-    std::filesystem::path source_file_;
-
   public:
     source_code_generator(llvm::Module &module, std::filesystem::path source_file) :
+      source_file_(source_file),
       module_(module),
       dbg_builder_(module_), 
       dbg_file_(dbg_builder_.createFile(source_file.string(), source_file.parent_path().string())),
@@ -117,6 +117,10 @@ public: // FIXME: proper encapsulation
       return source_code_.str();
     }
 
+    std::string source_file() {
+      return source_file_.string();
+    }
+
     friend std::ostream& operator<<(std::ostream& os, source_code_generator const& scg) {
       auto llvm_os = llvm::raw_os_ostream(os);
       llvm_os << scg.get();
@@ -125,7 +129,6 @@ public: // FIXME: proper encapsulation
   };
 
   source_code_generator source_code_;
-  std::filesystem::path source_file_;
 
   struct loop {
     llvm::BasicBlock* continue_block_ = nullptr;
@@ -140,7 +143,7 @@ public:
       context_(std::make_unique<llvm::LLVMContext>()),
       module_(std::make_unique<llvm::Module>(name, *context_)),
       ir_builder_(*context_),
-      source_code_(*module_, c.source_directory_ / std::filesystem::path(name))
+      source_code_(*module_, c.source_directory_ / std::filesystem::path(name + ".txt"))
   { }
 
   llvm::DIBuilder &debug_builder() { return source_code_.debug_builder(); }
@@ -164,7 +167,7 @@ public:
 
   [[nodiscard]] module build() && {
     {
-      auto ofs = std::ofstream(source_file_, std::ios::trunc);
+      auto ofs = std::ofstream(source_code_.source_file(), std::ios::trunc);
       ofs << source_code_.get();
     }
     source_code_.debug_builder().finalize();
