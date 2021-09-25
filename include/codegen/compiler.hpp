@@ -58,6 +58,8 @@ class compiler {
 
   std::filesystem::path source_directory_;
 
+  std::unordered_map<std::string, llvm::StructType*> custom_types;
+
   friend class module_builder;
 
 private:
@@ -120,6 +122,24 @@ public:
 
   llvm::Error compileModule(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::LLVMContext> context) {
     return lljit_->addIRModule(llvm::orc::ThreadSafeModule(std::move(module), std::move(context)));
+  }
+
+  template<typename... ElementTypes>
+  void add_aligned_struct_type(std::string const &name) {
+    // build type;
+    llvm::StructType * llvm_type = nullptr;
+
+    // check if we are overwriting any existing types.
+
+    bool check = custom_types.insert({name, llvm_type}).second;
+    if (!check) {
+      // insert failure.
+    }
+  }
+
+  llvm::StructType *get_struct_type(std::string const &name) {
+    // TODO
+
   }
 };
 

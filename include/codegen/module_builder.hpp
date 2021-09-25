@@ -77,7 +77,32 @@ public: // FIXME: proper encapsulation
     unsigned line_no_ = 1;
     unsigned indent_ = 0;
 
+    llvm::Module &module_;
+    llvm::DIBuilder dbg_builder_;
+    llvm::DIFile* dbg_file_;
+    llvm::DIScope* dbg_scope_;
+
+    std::filesystem::path source_file_;
+
   public:
+    source_code_generator(llvm::Module &module, std::filesystem::path source_file) :
+      module_(module),
+      dbg_builder_(module_), 
+      dbg_file_(dbg_builder_.createFile(source_file.string(), source_file.parent_path().string())),
+      dbg_scope_(dbg_file_)
+    {
+      dbg_builder_.createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus, dbg_file_, "codegen", true, "", 0);
+    }
+
+    llvm::DIBuilder& debug_builder() { return dbg_builder_; }
+    llvm::DIFile* debug_file() { return dbg_file_; }
+    llvm::DIScope *debug_scope() { return dbg_scope_; }
+    void set_debug_scope(llvm::DIScope *new_scope) { dbg_scope_ = new_scope; }
+
+    llvm::DILocation *get_debug_location(unsigned line, unsigned col = 1) {
+      return llvm::DILocation::get(module_.getContext(), line, col, dbg_scope_);
+    }
+
     unsigned add_line(std::string const& line) {
       source_code_ << std::string(indent_, ' ') << line << "\n";
       return line_no_++;
@@ -109,23 +134,19 @@ public: // FIXME: proper encapsulation
   loop current_loop_;
   bool exited_block_ = false;
 
-  llvm::DIBuilder dbg_builder_;
-
-  llvm::DIFile* dbg_file_;
-  llvm::DIScope* dbg_scope_;
-
 public:
-  module_builder(compiler& c, std::string const& name)
+  module_builder(compiler& c, std::string const& name, bool enable_debug_codegen = true)
     : compiler_(&c),
       context_(std::make_unique<llvm::LLVMContext>()),
       module_(std::make_unique<llvm::Module>(name, *context_)),
       ir_builder_(*context_),
-      source_file_(c.source_directory_ / (name + ".txt")),
-      dbg_builder_(*module_),
-      dbg_file_(dbg_builder_.createFile(source_file_.string(), source_file_.parent_path().string())),
-      dbg_scope_(dbg_file_)
-  {
-    dbg_builder_.createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus, dbg_file_, "codegen", true, "", 0);
+      source_code_(*module_, c.source_directory_ / std::filesystem::path(name))
+  { }
+
+  llvm::DIBuilder &debug_builder() { return source_code_.debug_builder(); }
+
+  llvm::DILocation *get_debug_location(unsigned line, unsigned col = 1) {
+    return source_code_.get_debug_location(line, col);
   }
 
   module_builder(module_builder const&) = delete;
@@ -146,7 +167,7 @@ public:
       auto ofs = std::ofstream(source_file_, std::ios::trunc);
       ofs << source_code_.get();
     }
-    dbg_builder_.finalize();
+    source_code_.debug_builder().finalize();
 
     if (compiler_->compileModule(std::move(module_), std::move(context_))) {
       // TODO: clean up module builder.
@@ -164,8 +185,12 @@ public:
   }
 
 private:
+  void set_function_attributes(llvm::Function* fn, std::pair<llvm::StringRef, llvm::StringRef> attribute_set) {
+    fn->addFnAttr(attribute_set.first, attribute_set.second);
+  }
+
   void set_function_attributes(llvm::Function* fn) {
-    fn->addFnAttr("target-cpu", llvm::sys::getHostCPUName());
+    set_function_attributes(fn, {"target-cpu", llvm::sys::getHostCPUName()});
   }
 
   void declare_external_symbol(std::string const& name, void* address) {

@@ -205,10 +205,12 @@ class function_builder<ReturnType(Arguments...)> {
     auto name = "arg" + std::to_string(idx);
     it->setName(name);
 
-    auto dbg_arg = mb.dbg_builder_.createParameterVariable(mb.dbg_scope_, name, idx + 1, mb.dbg_file_,
+    auto &debug_builder = mb.debug_builder();
+
+    auto dbg_arg = debug_builder.createParameterVariable(mb.source_code_.debug_scope(), name, idx + 1, mb.source_code_.debug_file(),
                                                            mb.source_code_.current_line(), type<Argument>::dbg());
-    mb.dbg_builder_.insertDbgValueIntrinsic(&*(args + idx), dbg_arg, mb.dbg_builder_.createExpression(),
-                                            llvm::DILocation::get(*mb.context_, mb.source_code_.current_line(), 1, mb.dbg_scope_),
+    mb.debug_builder().insertDbgValueIntrinsic(&*(args + idx), dbg_arg, debug_builder.createExpression(),
+                                            mb.get_debug_location(mb.source_code_.current_line()),
                                             mb.ir_builder_.GetInsertBlock());
   }
 
@@ -240,16 +242,19 @@ public:
     auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module_.get());
 
     std::vector<llvm::Metadata*> dbg_types = {detail::type<ReturnType>::dbg(), detail::type<Arguments>::dbg()...};
-    auto dbg_fn_type = mb.dbg_builder_.createSubroutineType(mb.dbg_builder_.getOrCreateTypeArray(dbg_types));
-    auto dbg_fn_scope = mb.dbg_builder_.createFunction(
-        mb.dbg_scope_, name, name, mb.dbg_file_, mb.source_code_.current_line(), dbg_fn_type,
+    auto &debug_builder = mb.debug_builder();
+    auto dbg_fn_type = debug_builder.createSubroutineType(debug_builder.getOrCreateTypeArray(dbg_types));
+    auto dbg_fn_scope = debug_builder.createFunction(
+        mb.source_code_.debug_scope(), name, name, mb.source_code_.debug_file(), mb.source_code_.current_line(), dbg_fn_type,
         mb.source_code_.current_line(), llvm::DINode::FlagPrototyped,
         llvm::DISubprogram::DISPFlags::SPFlagDefinition | llvm::DISubprogram::DISPFlags::SPFlagOptimized);
-    auto parent_scope = std::exchange(mb.dbg_scope_, dbg_fn_scope);
+    
+    auto parent_scope = mb.source_code_.debug_scope();
+    mb.source_code_.set_debug_scope(dbg_fn_scope);
+
     fn->setSubprogram(dbg_fn_scope);
 
-    // TODO: instantiate it?
-    //mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation{});
+    mb.ir_builder_.SetCurrentDebugLocation(mb.get_debug_location(mb.source_code_.current_line()));
 
     auto block = llvm::BasicBlock::Create(*mb.context_, "entry", fn);
     mb.ir_builder_.SetInsertPoint(block);
@@ -257,7 +262,7 @@ public:
     mb.function_ = fn;
     call_builder(std::index_sequence_for<Arguments...>{}, name, fb, fn->arg_begin());
 
-    mb.dbg_scope_ = parent_scope;
+    mb.source_code_.set_debug_scope(parent_scope);
 
     return function_ref<ReturnType, Arguments...>{name, fn};
   }

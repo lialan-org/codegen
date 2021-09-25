@@ -43,10 +43,11 @@ public:
     variable_ = alloca_builder.CreateAlloca(detail::type<Type>::llvm(), nullptr, name_);
 
     auto line_no = mb.source_code_.add_line(fmt::format("{} {};", detail::type<Type>::name(), name_));
+    auto &debug_builder = mb.debug_builder();
     auto dbg_variable =
-        mb.dbg_builder_.createAutoVariable(mb.dbg_scope_, name_, mb.dbg_file_, line_no, detail::type<Type>::dbg());
-    mb.dbg_builder_.insertDeclare(variable_, dbg_variable, mb.dbg_builder_.createExpression(),
-                                  llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_), mb.ir_builder_.GetInsertBlock());
+        debug_builder.createAutoVariable(mb.source_code_.debug_scope(), name_, mb.source_code_.debug_file(), line_no, detail::type<Type>::dbg());
+    debug_builder.insertDeclare(variable_, dbg_variable, debug_builder.createExpression(),
+                                  mb.get_debug_location(line_no), mb.ir_builder_.GetInsertBlock());
   }
 
   template<typename Value>
@@ -64,7 +65,7 @@ public:
   void set(V const& v) requires IsValue<V> && std::same_as<Type, typename V::value_type> {
     auto& mb = *detail::current_builder;
     auto line_no = mb.source_code_.add_line(fmt::format("{} = {};", name_, v));
-    mb.ir_builder_.SetCurrentDebugLocation(llvm::DILocation::get(*mb.context_, line_no, 1, mb.dbg_scope_));
+    mb.ir_builder_.SetCurrentDebugLocation(mb.get_debug_location(line_no));
     mb.ir_builder_.CreateAlignedStore(v.eval(), variable_, llvm::MaybeAlign(detail::type<Type>::alignment));
   }
 
