@@ -47,13 +47,6 @@ inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   mb.ir_builder_.SetInsertPoint(true_block);
   mb.source_code_.enter_scope();
 
-  auto scope = debug_builder.createLexicalBlock(mb.source_code_.debug_scope(),
-                                                mb.source_code_.debug_file(),
-                                                mb.source_code_.current_line(), 1);
-                      
-  auto parent_scope = mb.source_code_.debug_scope();;
-  mb.source_code_.set_debug_scope(scope);
-
   assert(!mb.exited_block_);
   tb();
   mb.source_code_.leave_scope();
@@ -68,14 +61,10 @@ inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
 
   mb.function_->getBasicBlockList().push_back(false_block);
   mb.ir_builder_.SetInsertPoint(false_block);
+
   mb.source_code_.enter_scope();
-
-  mb.source_code_.set_debug_scope(debug_builder.createLexicalBlock(parent_scope, mb.source_code_.debug_file(), mb.source_code_.current_line(), 1));
-
   fb();
   mb.source_code_.leave_scope();
-
-  mb.source_code_.set_debug_scope(parent_scope);
 
   line_no = mb.source_code_.add_line("}");
 
@@ -104,17 +93,11 @@ inline void if_(Condition&& cnd, TrueBlock&& tb) {
   mb.ir_builder_.CreateCondBr(cnd.eval(), true_block, merge_block);
 
   mb.ir_builder_.SetInsertPoint(true_block);
+
   mb.source_code_.enter_scope();
-
-  auto scope = debug_builder.createLexicalBlock(mb.source_code_.debug_scope(), mb.source_code_.debug_file(), mb.source_code_.current_line(), 1);
-
-  auto parent_scope = mb.source_code_.debug_scope();
-  mb.source_code_.set_debug_scope(scope);
-
   assert(!mb.exited_block_);
   tb();
   mb.source_code_.leave_scope();
-  mb.source_code_.set_debug_scope(parent_scope);
 
   line_no = mb.source_code_.add_line("}");
 
@@ -208,18 +191,12 @@ inline void while_(ConditionFn cnd_fn, Body bdy) {
 
   mb.source_code_.enter_scope();
 
-  auto scope = mb.debug_builder().createLexicalBlock(mb.source_code_.debug_scope(), mb.source_code_.debug_file(), mb.source_code_.current_line(), 1);
-
-  auto parent_scope = mb.source_code_.debug_scope();
-  mb.source_code_.set_debug_scope(scope);
-
   mb.function_->getBasicBlockList().push_back(while_iteration);
   mb.ir_builder_.SetInsertPoint(while_iteration);
 
   assert(!mb.exited_block_);
   bdy();
 
-  mb.source_code_.set_debug_scope(parent_scope);
   mb.source_code_.leave_scope();
 
   line_no = mb.source_code_.add_line("}");

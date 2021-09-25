@@ -81,7 +81,7 @@ public: // FIXME: proper encapsulation
     llvm::Module &module_;
     llvm::DIBuilder dbg_builder_;
     llvm::DIFile* dbg_file_;
-    llvm::DIScope* dbg_scope_;
+    std::stack<llvm::DIScope*> dbg_scopes_;
 
   public:
     source_code_generator(llvm::Module &module, std::filesystem::path source_file) :
@@ -89,18 +89,18 @@ public: // FIXME: proper encapsulation
       module_(module),
       dbg_builder_(module_), 
       dbg_file_(dbg_builder_.createFile(source_file.string(), source_file.parent_path().string())),
-      dbg_scope_(dbg_file_)
+      dbg_scopes_({dbg_file_})
     {
       dbg_builder_.createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus, dbg_file_, "codegen", true, "", 0);
     }
 
     llvm::DIBuilder& debug_builder() { return dbg_builder_; }
     llvm::DIFile* debug_file() { return dbg_file_; }
-    llvm::DIScope *debug_scope() { return dbg_scope_; }
-    void set_debug_scope(llvm::DIScope *new_scope) { dbg_scope_ = new_scope; }
+    llvm::DIScope *debug_scope() { return dbg_scopes_.top(); }
+    void create_debug_scope(llvm::DIScope *new_scope) { dbg_scopes_.push(new_scope); }
 
     llvm::DILocation *get_debug_location(unsigned line, unsigned col = 1) {
-      return llvm::DILocation::get(module_.getContext(), line, col, dbg_scope_);
+      return llvm::DILocation::get(module_.getContext(), line, col, debug_scope());
     }
 
     unsigned add_line(std::string const& line) {
@@ -108,8 +108,22 @@ public: // FIXME: proper encapsulation
       return line_no_++;
     }
 
-    void enter_scope() { indent_ += 4; }
-    void leave_scope() { indent_ -= 4; }
+    void enter_scope() {
+      indent_ += 4;
+      dbg_scopes_.emplace(dbg_builder_.createLexicalBlock(debug_scope(), dbg_file_, current_line(), 1));
+    }
+
+    void leave_scope() {
+      indent_ -= 4;
+      dbg_scopes_.pop();
+    }
+
+    template<typename ReturnType, typename... Arguments>
+    llvm::DISubprogram *enter_function_scope(std::string const& function_name);
+
+    void leave_function_scope() {
+      dbg_scopes_.pop();
+    }
 
     unsigned current_line() const { return line_no_; }
 

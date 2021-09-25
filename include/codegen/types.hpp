@@ -241,16 +241,7 @@ public:
     auto fn_type = llvm::FunctionType::get(type<ReturnType>::llvm(), {type<Arguments>::llvm()...}, false);
     auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module_.get());
 
-    std::vector<llvm::Metadata*> dbg_types = {detail::type<ReturnType>::dbg(), detail::type<Arguments>::dbg()...};
-    auto &debug_builder = mb.debug_builder();
-    auto dbg_fn_type = debug_builder.createSubroutineType(debug_builder.getOrCreateTypeArray(dbg_types));
-    auto dbg_fn_scope = debug_builder.createFunction(
-        mb.source_code_.debug_scope(), name, name, mb.source_code_.debug_file(), mb.source_code_.current_line(), dbg_fn_type,
-        mb.source_code_.current_line(), llvm::DINode::FlagPrototyped,
-        llvm::DISubprogram::DISPFlags::SPFlagDefinition | llvm::DISubprogram::DISPFlags::SPFlagOptimized);
-    
-    auto parent_scope = mb.source_code_.debug_scope();
-    mb.source_code_.set_debug_scope(dbg_fn_scope);
+    auto dbg_fn_scope = mb.source_code_.enter_function_scope<ReturnType, Arguments...>(name);
 
     fn->setSubprogram(dbg_fn_scope);
 
@@ -262,7 +253,7 @@ public:
     mb.function_ = fn;
     call_builder(std::index_sequence_for<Arguments...>{}, name, fb, fn->arg_begin());
 
-    mb.source_code_.set_debug_scope(parent_scope);
+    mb.source_code_.leave_function_scope();
 
     return function_ref<ReturnType, Arguments...>{name, fn};
   }
@@ -397,6 +388,18 @@ auto module_builder::declare_external_function(std::string const& name, Function
   declare_external_symbol(name, reinterpret_cast<void*>(fn));
 
   return fn_ref;
+}
+
+template<typename ReturnType, typename... Arguments>
+llvm::DISubprogram *module_builder::source_code_generator::enter_function_scope(std::string const& function_name) {
+  std::vector<llvm::Metadata*> dbg_types = {detail::type<ReturnType>::dbg(), detail::type<Arguments>::dbg()...};
+  auto dbg_fn_type = dbg_builder_.createSubroutineType(dbg_builder_.getOrCreateTypeArray(dbg_types));
+  auto dbg_fn_scope = dbg_builder_.createFunction(
+      debug_scope(), function_name, function_name, debug_file(), current_line(),
+      dbg_fn_type, current_line(), llvm::DINode::FlagPrototyped,
+      llvm::DISubprogram::DISPFlags::SPFlagDefinition | llvm::DISubprogram::DISPFlags::SPFlagOptimized);
+  dbg_scopes_.push(dbg_fn_scope);
+  return dbg_fn_scope;
 }
 
 } // namespace codegen
