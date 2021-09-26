@@ -56,18 +56,18 @@ class compiler {
 
   llvm::JITEventListener* gdb_listener_;
 
-  std::filesystem::path source_directory_;
+  const std::string name_;
 
   std::unordered_map<std::string, llvm::StructType*> custom_types;
 
   friend class module_builder;
 
 private:
-  explicit compiler(std::string const &context_name, llvm::orc::JITTargetMachineBuilder tmb)
+  explicit compiler(std::string const &context_name, llvm::orc::JITTargetMachineBuilder tmb, std::string const& name = "LLVM_JIT")
     : data_layout_(cantFail(tmb.getDefaultDataLayoutForTarget())),
       mangle_(session_, data_layout_),
       gdb_listener_(llvm::JITEventListener::createGDBRegistrationListener()),
-      source_directory_(std::filesystem::temp_directory_path() / ("codegen_" + context_name))
+      name_(name)
   {
     auto jtmb = cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
     lljit_ = cantFail((llvm::orc::LLJITBuilder()
@@ -97,8 +97,6 @@ private:
                               [MainName = mangle_("main")](const llvm::orc::SymbolStringPtr &Name) {
                                 return Name != MainName;
                               })));
-
-    std::filesystem::create_directories(source_directory_);
   }
 
 public:
@@ -106,10 +104,6 @@ public:
     : compiler(context_name, cantFail(llvm::orc::JITTargetMachineBuilder::detectHost()))
     {
     }
-
-  ~compiler() {
-    std::filesystem::remove_all(source_directory_);
-  }
 
   compiler(compiler const&) = delete;
   compiler(compiler&&) = delete;
@@ -123,6 +117,8 @@ public:
   llvm::Error compileModule(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::LLVMContext> context) {
     return lljit_->addIRModule(llvm::orc::ThreadSafeModule(std::move(module), std::move(context)));
   }
+
+  const std::string &name() { return name_; }
 
   template<typename... ElementTypes>
   void add_aligned_struct_type(std::string const &name) {

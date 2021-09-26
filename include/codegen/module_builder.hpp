@@ -131,9 +131,7 @@ public: // FIXME: proper encapsulation
       return source_code_.str();
     }
 
-    std::string source_file() {
-      return source_file_.string();
-    }
+    std::filesystem::path source_file() { return source_file_; }
 
     friend std::ostream& operator<<(std::ostream& os, source_code_generator const& scg) {
       auto llvm_os = llvm::raw_os_ostream(os);
@@ -157,8 +155,10 @@ public:
       context_(std::make_unique<llvm::LLVMContext>()),
       ir_builder_(*context_),
       module_(std::make_unique<llvm::Module>(name, *context_)),
-      source_code_(*module_, c.source_directory_ / std::filesystem::path(name + ".txt"))
-  { }
+      source_code_(*module_, std::filesystem::temp_directory_path() / ("cg_" + c.name()) / std::filesystem::path(name + ".c"))
+  {
+    std::filesystem::create_directories(source_code_.source_file().parent_path());
+  }
 
   llvm::DIBuilder &debug_builder() { return source_code_.debug_builder(); }
 
