@@ -55,32 +55,32 @@ public:
   llvm::Value* eval() const {
     if constexpr (std::is_integral_v<value_type>) {
       switch (Op) {
-      case arithmetic_operation_type::add: return current_builder->ir_builder_.CreateAdd(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::sub: return current_builder->ir_builder_.CreateSub(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::mul: return current_builder->ir_builder_.CreateMul(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::add: return current_builder->ir_builder().CreateAdd(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::sub: return current_builder->ir_builder().CreateSub(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::mul: return current_builder->ir_builder().CreateMul(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::div:
         if constexpr (std::is_signed_v<value_type>) {
-          return current_builder->ir_builder_.CreateSDiv(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateSDiv(lhs_.eval(), rhs_.eval());
         } else {
-          return current_builder->ir_builder_.CreateUDiv(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateUDiv(lhs_.eval(), rhs_.eval());
         }
       case arithmetic_operation_type::mod:
         if constexpr (std::is_signed_v<value_type>) {
-          return current_builder->ir_builder_.CreateSRem(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateSRem(lhs_.eval(), rhs_.eval());
         } else {
-          return current_builder->ir_builder_.CreateURem(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateURem(lhs_.eval(), rhs_.eval());
         }
-      case arithmetic_operation_type::and_: return current_builder->ir_builder_.CreateAnd(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::or_: return current_builder->ir_builder_.CreateOr(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::xor_: return current_builder->ir_builder_.CreateXor(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::and_: return current_builder->ir_builder().CreateAnd(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::or_: return current_builder->ir_builder().CreateOr(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::xor_: return current_builder->ir_builder().CreateXor(lhs_.eval(), rhs_.eval());
       }
     } else {
       switch (Op) {
-      case arithmetic_operation_type::add: return current_builder->ir_builder_.CreateFAdd(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::sub: return current_builder->ir_builder_.CreateFSub(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::mul: return current_builder->ir_builder_.CreateFMul(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::div: return current_builder->ir_builder_.CreateFDiv(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::mod: return current_builder->ir_builder_.CreateFRem(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::add: return current_builder->ir_builder().CreateFAdd(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::sub: return current_builder->ir_builder().CreateFSub(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::mul: return current_builder->ir_builder().CreateFMul(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::div: return current_builder->ir_builder().CreateFDiv(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::mod: return current_builder->ir_builder().CreateFRem(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::and_: [[fallthrough]];
       case arithmetic_operation_type::or_: [[fallthrough]];
       case arithmetic_operation_type::xor_: abort();
@@ -130,15 +130,15 @@ public:
     auto rhs = rhs_.eval();
     if constexpr (sizeof(rhs_value_type) < sizeof(uint64_t)) {
       if constexpr (std::is_unsigned_v<rhs_value_type>) {
-        rhs = mb.ir_builder_.CreateZExt(rhs, type<uint64_t>::llvm());
+        rhs = mb.ir_builder().CreateZExt(rhs, type<uint64_t>::llvm());
       } else {
-        rhs = mb.ir_builder_.CreateSExt(rhs, type<int64_t>::llvm());
+        rhs = mb.ir_builder().CreateSExt(rhs, type<int64_t>::llvm());
       }
     }
     switch (Op) {
-    case pointer_arithmetic_operation_type::add: return mb.ir_builder_.CreateInBoundsGEP(lhs_.eval(), rhs);
+    case pointer_arithmetic_operation_type::add: return mb.ir_builder().CreateInBoundsGEP(lhs_.eval(), rhs);
     case pointer_arithmetic_operation_type::sub:
-      return mb.ir_builder_.CreateInBoundsGEP(lhs_.eval(), mb.ir_builder_.CreateSub(constant<int64_t>(0), rhs));
+      return mb.ir_builder().CreateInBoundsGEP(lhs_.eval(), mb.ir_builder().CreateSub(constant<int64_t>(0), rhs));
     }
     abort();
   }

@@ -63,12 +63,12 @@ public:
 
 class module_builder {
   compiler* compiler_;
-
-public: // FIXME: proper encapsulation
   std::unique_ptr<llvm::LLVMContext> context_;
+  llvm::IRBuilder<> ir_builder_;
   std::unique_ptr<llvm::Module> module_;
 
-  llvm::IRBuilder<> ir_builder_;
+public: // FIXME: proper encapsulation
+
 
   llvm::Function* function_{};
 
@@ -155,8 +155,8 @@ public:
   module_builder(compiler& c, std::string const& name, bool enable_debug_codegen = true)
     : compiler_(&c),
       context_(std::make_unique<llvm::LLVMContext>()),
-      module_(std::make_unique<llvm::Module>(name, *context_)),
       ir_builder_(*context_),
+      module_(std::make_unique<llvm::Module>(name, *context_)),
       source_code_(*module_, c.source_directory_ / std::filesystem::path(name + ".txt"))
   { }
 
@@ -179,7 +179,11 @@ public:
     module_->print(out, nullptr);
   }
 
-  [[nodiscard]] module build() && {
+  llvm::IRBuilder<> &ir_builder() { return ir_builder_; }
+  llvm::LLVMContext &context() {return *context_; }
+  llvm::Module &module() { return *module_; }
+
+  [[nodiscard]] class module build() && {
     {
       auto ofs = std::ofstream(source_code_.source_file(), std::ios::trunc);
       ofs << source_code_.get();
@@ -192,7 +196,7 @@ public:
       //llvm_unreachable("Failed to compile"); // TODO: more error messages.
     }
 
-    return module{std::move(compiler_->lljit_), compiler_->mangle_};
+    return codegen::module{std::move(compiler_->lljit_), compiler_->mangle_};
   }
 
   friend std::ostream& operator<<(std::ostream& os, module_builder const& mb) {

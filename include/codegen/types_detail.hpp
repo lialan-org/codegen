@@ -20,7 +20,7 @@ struct type {
     return current_builder->debug_builder().createBasicType(
         name(), sizeof(Type) * 8, std::is_signed_v<Type> ? llvm::dwarf::DW_ATE_signed : llvm::dwarf::DW_ATE_unsigned);
   }
-  static llvm::Type* llvm() { return llvm::Type::getIntNTy(*current_builder->context_, sizeof(Type) * 8); }
+  static llvm::Type* llvm() { return llvm::Type::getIntNTy(current_builder->context(), sizeof(Type) * 8); }
   static std::string name() { return fmt::format("{}{}", std::is_signed_v<Type> ? 'i' : 'u', sizeof(Type) * 8); }
 };
 
@@ -28,7 +28,7 @@ template<>
 struct type<void> {
   static constexpr size_t alignment = 0;
   static llvm::DIType* dbg() { return nullptr; }
-  static llvm::Type* llvm() { return llvm::Type::getVoidTy(*current_builder->context_); }
+  static llvm::Type* llvm() { return llvm::Type::getVoidTy(current_builder->context()); }
   static std::string name() { return "void"; }
 };
 
@@ -38,7 +38,7 @@ struct type<bool> {
   static llvm::DIType* dbg() {
     return current_builder->debug_builder().createBasicType(name(), 8, llvm::dwarf::DW_ATE_boolean);
   }
-  static llvm::Type* llvm() { return llvm::Type::getInt1Ty(*current_builder->context_); }
+  static llvm::Type* llvm() { return llvm::Type::getInt1Ty(current_builder->context()); }
   static std::string name() { return "bool"; }
 };
 
@@ -48,7 +48,7 @@ struct type<std::byte> {
   static llvm::DIType* dbg() {
     return current_builder->debug_builder().createBasicType(name(), 8, llvm::dwarf::DW_ATE_unsigned);
   }
-  static llvm::Type* llvm() { return llvm::Type::getInt8Ty(*current_builder->context_); }
+  static llvm::Type* llvm() { return llvm::Type::getInt8Ty(current_builder->context()); }
   static std::string name() { return "byte"; }
 };
 
@@ -58,7 +58,7 @@ struct type<float> {
   static llvm::DIType* dbg() {
     return current_builder->debug_builder().createBasicType(name(), 32, llvm::dwarf::DW_ATE_float);
   }
-  static llvm::Type* llvm() { return llvm::Type::getFloatTy(*current_builder->context_); }
+  static llvm::Type* llvm() { return llvm::Type::getFloatTy(current_builder->context()); }
   static std::string name() { return "f32"; }
 };
 
@@ -68,7 +68,7 @@ struct type<double> {
   static llvm::DIType* dbg() {
     return current_builder->debug_builder().createBasicType(name(), 64, llvm::dwarf::DW_ATE_float);
   }
-  static llvm::Type* llvm() { return llvm::Type::getDoubleTy(*current_builder->context_); }
+  static llvm::Type* llvm() { return llvm::Type::getDoubleTy(current_builder->context()); }
   static std::string name() { return "f64"; }
 };
 
@@ -89,8 +89,7 @@ struct type<Type[N]> {
   static constexpr size_t alignment = alignof(Type);
 
   static llvm::DIType* dbg() {
-    // TODO: don't know how to create DI Type for array, need to fix this.
-    return current_builder->debug_builder().createBasicType(name(), 32, llvm::dwarf::DW_ATE_float);
+    return current_builder->debug_builder().createBasicType(name(), 32, llvm::dwarf::DW_TAG_array_type);
   }
   static llvm::Type* llvm() {
     return llvm::ArrayType::get(type<Type>::llvm(), N);

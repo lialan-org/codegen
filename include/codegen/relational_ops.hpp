@@ -52,41 +52,41 @@ public:
   llvm::Value* eval() const {
     if constexpr (std::is_integral_v<operand_type>) {
       switch (Op) {
-      case relational_operation_type::eq: return current_builder->ir_builder_.CreateICmpEQ(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ne: return current_builder->ir_builder_.CreateICmpNE(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::eq: return current_builder->ir_builder().CreateICmpEQ(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::ne: return current_builder->ir_builder().CreateICmpNE(lhs_.eval(), rhs_.eval());
       case relational_operation_type::ge:
         if constexpr (std::is_signed_v<operand_type>) {
-          return current_builder->ir_builder_.CreateICmpSGE(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateICmpSGE(lhs_.eval(), rhs_.eval());
         } else {
-          return current_builder->ir_builder_.CreateICmpUGE(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateICmpUGE(lhs_.eval(), rhs_.eval());
         }
       case relational_operation_type::gt:
         if constexpr (std::is_signed_v<operand_type>) {
-          return current_builder->ir_builder_.CreateICmpSGT(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateICmpSGT(lhs_.eval(), rhs_.eval());
         } else {
-          return current_builder->ir_builder_.CreateICmpUGT(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateICmpUGT(lhs_.eval(), rhs_.eval());
         }
       case relational_operation_type::le:
         if constexpr (std::is_signed_v<operand_type>) {
-          return current_builder->ir_builder_.CreateICmpSLE(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateICmpSLE(lhs_.eval(), rhs_.eval());
         } else {
-          return current_builder->ir_builder_.CreateICmpULE(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateICmpULE(lhs_.eval(), rhs_.eval());
         }
       case relational_operation_type::lt:
         if constexpr (std::is_signed_v<operand_type>) {
-          return current_builder->ir_builder_.CreateICmpSLT(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateICmpSLT(lhs_.eval(), rhs_.eval());
         } else {
-          return current_builder->ir_builder_.CreateICmpULT(lhs_.eval(), rhs_.eval());
+          return current_builder->ir_builder().CreateICmpULT(lhs_.eval(), rhs_.eval());
         }
       }
     } else {
       switch (Op) {
-      case relational_operation_type::eq: return current_builder->ir_builder_.CreateFCmpOEQ(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ne: return current_builder->ir_builder_.CreateFCmpONE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ge: return current_builder->ir_builder_.CreateFCmpOGE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::gt: return current_builder->ir_builder_.CreateFCmpOGT(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::le: return current_builder->ir_builder_.CreateFCmpOLE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::lt: return current_builder->ir_builder_.CreateFCmpOLT(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::eq: return current_builder->ir_builder().CreateFCmpOEQ(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::ne: return current_builder->ir_builder().CreateFCmpONE(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::ge: return current_builder->ir_builder().CreateFCmpOGE(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::gt: return current_builder->ir_builder().CreateFCmpOGT(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::le: return current_builder->ir_builder().CreateFCmpOLE(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::lt: return current_builder->ir_builder().CreateFCmpOLT(lhs_.eval(), rhs_.eval());
       }
     }
   }

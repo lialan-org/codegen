@@ -47,7 +47,7 @@ public:
 
     auto& mb = *detail::current_builder;
 
-    llvm::StructType* const struct_type = llvm::StructType::create(*mb.context_, name);
+    llvm::StructType* const struct_type = llvm::StructType::create(mb.context(), name);
     struct_type->setBody(type_vec);
     return struct_type;
   }

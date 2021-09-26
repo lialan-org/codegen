@@ -182,11 +182,11 @@ namespace codegen::detail {
 inline llvm::Value* get_constant(LLVMPODType auto v) {
   using Type = decltype(v);
   if constexpr (LLVMIntegralType<Type>) {
-    return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
+    return llvm::ConstantInt::get(current_builder->context(), llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
   } else if constexpr (LLVMFloatingType<Type>) {
-    return llvm::ConstantFP::get(*current_builder->context_, llvm::APFloat(v));
+    return llvm::ConstantFP::get(current_builder->context(), llvm::APFloat(v));
   } else if constexpr (LLVMBoolType<Type>) {
-    return llvm::ConstantInt::get(*current_builder->context_, llvm::APInt(1, v, true));
+    return llvm::ConstantInt::get(current_builder->context(), llvm::APInt(1, v, true));
   } else {
     llvm_unreachable("Unsupported type");
   }
@@ -211,7 +211,7 @@ class function_builder<ReturnType(Arguments...)> {
                                                            mb.source_code_.current_line(), type<Argument>::dbg());
     mb.debug_builder().insertDbgValueIntrinsic(&*(args + idx), dbg_arg, debug_builder.createExpression(),
                                             mb.get_debug_location(mb.source_code_.current_line()),
-                                            mb.ir_builder_.GetInsertBlock());
+                                            mb.ir_builder().GetInsertBlock());
   }
 
   template<size_t... Idx, typename FunctionBuilder>
@@ -239,16 +239,16 @@ public:
   function_ref<ReturnType, Arguments...> operator()(std::string const& name, FunctionBuilder&& fb) {
     auto& mb = *current_builder;
     auto fn_type = llvm::FunctionType::get(type<ReturnType>::llvm(), {type<Arguments>::llvm()...}, false);
-    auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module_.get());
+    auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module());
 
     auto dbg_fn_scope = mb.source_code_.enter_function_scope<ReturnType, Arguments...>(name);
 
     fn->setSubprogram(dbg_fn_scope);
 
-    mb.ir_builder_.SetCurrentDebugLocation(mb.get_debug_location(mb.source_code_.current_line()));
+    mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(mb.source_code_.current_line()));
 
-    auto block = llvm::BasicBlock::Create(*mb.context_, "entry", fn);
-    mb.ir_builder_.SetInsertPoint(block);
+    auto block = llvm::BasicBlock::Create(mb.context(), "entry", fn);
+    mb.ir_builder().SetInsertPoint(block);
 
     mb.function_ = fn;
     call_builder(std::index_sequence_for<Arguments...>{}, name, fb, fn->arg_begin());
@@ -268,7 +268,7 @@ public:
     auto& mb = *current_builder;
 
     auto fn_type = llvm::FunctionType::get(type<ReturnType>::llvm(), {type<Arguments>::llvm()...}, false);
-    auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module_.get());
+    auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module());
 
     return function_ref<ReturnType, Arguments...>{name, fn};
   }
@@ -289,7 +289,7 @@ public:
   bit_cast_impl(FromValue fv) : from_value_(fv) {}
 
   llvm::Value* eval() {
-    return detail::current_builder->ir_builder_.CreateBitCast(from_value_.eval(), type<ToType>::llvm());
+    return detail::current_builder->ir_builder().CreateBitCast(from_value_.eval(), type<ToType>::llvm());
   }
 
   friend std::ostream& operator<<(std::ostream& os, bit_cast_impl bci) {
@@ -314,24 +314,24 @@ public:
   llvm::Value* eval() {
     auto& mb = *current_builder;
     if constexpr (std::is_floating_point_v<from_type> && std::is_floating_point_v<to_type>) {
-      return mb.ir_builder_.CreateFPCast(from_value_.eval(), type<to_type>::llvm());
+      return mb.ir_builder().CreateFPCast(from_value_.eval(), type<to_type>::llvm());
     } else if constexpr (std::is_floating_point_v<from_type> && std::is_integral_v<to_type>) {
       if constexpr (std::is_signed_v<to_type>) {
-        return mb.ir_builder_.CreateFPToSI(from_value_.eval(), type<to_type>::llvm());
+        return mb.ir_builder().CreateFPToSI(from_value_.eval(), type<to_type>::llvm());
       } else {
-        return mb.ir_builder_.CreateFPToUI(from_value_.eval(), type<to_type>::llvm());
+        return mb.ir_builder().CreateFPToUI(from_value_.eval(), type<to_type>::llvm());
       }
     } else if constexpr (std::is_integral_v<from_type> && std::is_floating_point_v<to_type>) {
       if constexpr (std::is_signed_v<from_type>) {
-        return mb.ir_builder_.CreateSIToFP(from_value_.eval(), type<to_type>::llvm());
+        return mb.ir_builder().CreateSIToFP(from_value_.eval(), type<to_type>::llvm());
       } else {
-        return mb.ir_builder_.CreateUIToFP(from_value_.eval(), type<to_type>::llvm());
+        return mb.ir_builder().CreateUIToFP(from_value_.eval(), type<to_type>::llvm());
       }
     } else if constexpr (std::is_integral_v<from_type> && std::is_integral_v<to_type>) {
       if constexpr (std::is_signed_v<from_type>) {
-        return mb.ir_builder_.CreateSExtOrTrunc(from_value_.eval(), type<to_type>::llvm());
+        return mb.ir_builder().CreateSExtOrTrunc(from_value_.eval(), type<to_type>::llvm());
       } else {
-        return mb.ir_builder_.CreateZExtOrTrunc(from_value_.eval(), type<to_type>::llvm());
+        return mb.ir_builder().CreateZExtOrTrunc(from_value_.eval(), type<to_type>::llvm());
       }
     }
   }
