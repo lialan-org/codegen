@@ -25,7 +25,7 @@
 #include <gtest/gtest.h>
 
 TEST(arithmetic_ops, signed_integer_arithmetic) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "signed_integer_arithmetic");
 
   auto add2 = builder.create_function<int32_t(int32_t, int32_t)>(
@@ -62,7 +62,7 @@ TEST(arithmetic_ops, signed_integer_arithmetic) {
 }
 
 TEST(arithmetic_ops, unsigned_integer_arithmetic) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "unsigned_integer_arithmetic");
 
   auto add2 = builder.create_function<uint32_t(uint32_t, uint32_t)>(
@@ -99,7 +99,7 @@ TEST(arithmetic_ops, unsigned_integer_arithmetic) {
 }
 
 TEST(arithmetic_ops, float_arithmetic) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "float_arithmetic");
 
   auto add2 =
@@ -138,7 +138,7 @@ TEST(arithmetic_ops, float_arithmetic) {
 }
 
 TEST(arithmetic_ops, signed_integer_bitwise) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "signed_integer_bitwise");
 
   auto and2 = builder.create_function<int32_t(int32_t, int32_t)>(
@@ -174,7 +174,7 @@ TEST(arithmetic_ops, signed_integer_bitwise) {
 
 TEST(arithmetic_ops, pointer_arithmetic) {
 
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "pointer_arithmetic");
 
   auto add = builder.create_function<int32_t(int32_t*, int32_t)>(

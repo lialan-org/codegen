@@ -44,7 +44,7 @@ void print_probe(int x, int y) {
 int main(int argc, char* argv[]) {
   INIT_LLVM_ENV(argc, argv);
 
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "hash_join");
 
   auto put_decl = builder.declare_external_function("put_val", put_val);

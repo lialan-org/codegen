@@ -27,14 +27,14 @@
 using namespace codegen::literals;
 
 TEST(module_builder, empty) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "empty");
   auto module = std::move(builder).build();
   (void)module;
 }
 
 TEST(module_builder, return_void) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "return_void");
   auto fn = builder.create_function<void()>("return_void_fn", [] { codegen::return_(); });
   auto module = std::move(builder).build();
@@ -43,7 +43,7 @@ TEST(module_builder, return_void) {
 }
 
 TEST(module_builder, return_i32) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "return_i32");
 
   auto return_constant = builder.create_function<int32_t()>("return_constant", [] { codegen::return_(4_i32); });
@@ -63,7 +63,7 @@ TEST(module_builder, return_i32) {
 }
 
 TEST(module_builder, external_functions) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "external_functions");
 
   bool called = false;
@@ -86,7 +86,7 @@ TEST(module_builder, external_functions) {
 }
 
 TEST(module_builder, bit_cast) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "bit_cast");
 
   auto intptr_to_voidptr = builder.create_function<void*(int32_t*)>(
@@ -99,7 +99,7 @@ TEST(module_builder, bit_cast) {
 }
 
 TEST(module_builder, cast) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "cast");
 
   auto f32_to_i16 = builder.create_function<int16_t(float)>(

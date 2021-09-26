@@ -38,12 +38,12 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include "compiler.hpp"
+#include "compiler_context.hpp"
 #include "module.hpp"
 
 namespace codegen {
 
-class compiler;
+class compiler_context;
 class module;
 
 template<typename ReturnType, typename... Arguments> class function_ref {
@@ -65,7 +65,7 @@ public:
 };
 
 class module_builder {
-  compiler* compiler_;
+  compiler_context* compiler_;
   std::unique_ptr<llvm::LLVMContext> context_;
   llvm::IRBuilder<> ir_builder_;
   std::unique_ptr<llvm::Module> module_;
@@ -149,7 +149,7 @@ public:
   static void deregister_current_builder() { module_builder::current_builder_.release(); }
 
 public:
-  module_builder(compiler& c, std::string const& name, bool enable_debug_codegen = true)
+  module_builder(compiler_context& c, std::string const& name, bool enable_debug_codegen = true)
       : compiler_(&c), context_(std::make_unique<llvm::LLVMContext>()), ir_builder_(*context_),
         module_(std::make_unique<llvm::Module>(name, *context_)), function_(nullptr),
         source_code_(*module_,

@@ -25,7 +25,7 @@
 #include <gtest/gtest.h>
 
 TEST(builtin, memcpy) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "memcpy");
 
   auto memcpy_i32 = builder.create_function<void(int32_t*, int32_t*)>(
@@ -58,7 +58,7 @@ TEST(builtin, memcpy) {
 }
 
 TEST(builtin, bswap) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "bswap");
 
   auto bswap_i32 = builder.create_function<int32_t(int32_t)>(

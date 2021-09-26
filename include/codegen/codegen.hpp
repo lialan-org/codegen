@@ -2,7 +2,7 @@
 
 #include "arithmetic_ops.hpp"
 #include "builtin.hpp"
-#include "compiler.hpp"
+#include "compiler_context.hpp"
 #include "literals.hpp"
 #include "module.hpp"
 #include "module_builder.hpp"

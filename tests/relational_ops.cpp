@@ -25,7 +25,7 @@
 #include <gtest/gtest.h>
 
 TEST(relational_ops, signed_integer) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "signed_integer");
 
   auto eq2 = builder.create_function<bool(int32_t, int32_t)>(
@@ -90,7 +90,7 @@ TEST(relational_ops, signed_integer) {
 }
 
 TEST(relational_ops, unsigned_integer) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "unsigned_integer");
 
   auto eq2 = builder.create_function<bool(uint32_t, uint32_t)>(
@@ -155,7 +155,7 @@ TEST(relational_ops, unsigned_integer) {
 }
 
 TEST(relational_ops, floating_point) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "float");
 
   auto eq2 = builder.create_function<bool(float, float)>(

@@ -45,7 +45,7 @@
 
 namespace codegen {
 
-class compiler {
+class compiler_context {
   llvm::orc::ExecutionSession session_;
 
   llvm::DataLayout data_layout_;
@@ -63,7 +63,7 @@ class compiler {
   friend class module_builder;
 
 private:
-  explicit compiler(std::string const& context_name, llvm::orc::JITTargetMachineBuilder tmb,
+  explicit compiler_context(std::string const& context_name, llvm::orc::JITTargetMachineBuilder tmb,
                     std::string const& name = "LLVM_JIT")
       : data_layout_(cantFail(tmb.getDefaultDataLayoutForTarget())), mangle_(session_, data_layout_),
         gdb_listener_(llvm::JITEventListener::createGDBRegistrationListener()), name_(name) {
@@ -92,11 +92,11 @@ private:
   }
 
 public:
-  compiler(std::string context_name = "codegen")
-      : compiler(context_name, cantFail(llvm::orc::JITTargetMachineBuilder::detectHost())) {}
+  compiler_context(std::string context_name = "codegen")
+      : compiler_context(context_name, cantFail(llvm::orc::JITTargetMachineBuilder::detectHost())) {}
 
-  compiler(compiler const&) = delete;
-  compiler(compiler&&) = delete;
+  compiler_context(compiler_context const&) = delete;
+  compiler_context(compiler_context&&) = delete;
 
   void add_symbol(std::string const& name, void* address) {
     cantFail(lljit_->getMainJITDylib().define(llvm::orc::absoluteSymbols(

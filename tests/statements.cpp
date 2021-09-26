@@ -25,7 +25,7 @@
 #include <gtest/gtest.h>
 
 TEST(statements, if_condition) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "if_cond");
 
   auto if_cond = builder.create_function<int32_t(int32_t)>("if_cond_fn", [](codegen::value<int32_t> x) {
@@ -43,7 +43,7 @@ TEST(statements, if_condition) {
 }
 
 TEST(statements, if_condition_true_only) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "if_cond_true_only");
 
   auto if_cond = builder.create_function<int32_t(int32_t)>("if_cond_fn", [](codegen::value<int32_t> x) {
@@ -61,7 +61,7 @@ TEST(statements, if_condition_true_only) {
 }
 
 TEST(statements, if_condition_nested) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "if_cond_nested");
 
   auto if_cond_nested = builder.create_function<int32_t(int32_t, int32_t)>(
@@ -90,7 +90,7 @@ TEST(statements, if_condition_nested) {
 }
 
 TEST(statements, function_call) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "function_call");
 
   auto add2 = builder.create_function<int32_t(int32_t, int32_t)>(
@@ -108,7 +108,7 @@ TEST(statements, function_call) {
 }
 
 TEST(statements, load) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "load");
 
   int32_t value = 8;
@@ -126,7 +126,7 @@ TEST(statements, load) {
 }
 
 TEST(statements, store) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "store");
 
   int32_t value = 8;
@@ -148,7 +148,7 @@ TEST(statements, store) {
 }
 
 TEST(statements, while_loop) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "while_loop");
 
   auto fact = builder.create_function<int32_t(int32_t)>("fact", [&](codegen::value<int32_t> x) {
@@ -174,7 +174,7 @@ TEST(statements, while_loop) {
 }
 
 TEST(statements, while_loop_continue) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "while_loop_continue");
 
   auto while_loop_continue =
@@ -201,7 +201,7 @@ TEST(statements, while_loop_continue) {
 }
 
 TEST(statements, while_loop_break) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "while_loop_break");
 
   auto while_loop_break =

@@ -25,7 +25,7 @@
 #include <gtest/gtest.h>
 
 TEST(variable, set_get) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "set_get");
 
   auto set_get = builder.create_function<int32_t(int32_t)>("set_get_fn", [](codegen::value<int32_t> x) {

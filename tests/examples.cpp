@@ -38,7 +38,7 @@ template<typename T> size_t less_cmp(cg::value<std::byte*> a_ptr, cg::value<std:
 }
 
 TEST(examples, tuple_i32f32u16_less) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "tuple_i32f32u16_less");
   auto less = builder.create_function<bool(std::byte*, std::byte*)>(
       "less", [&](cg::value<std::byte*> a_ptr, cg::value<std::byte*> b_ptr) {
@@ -72,7 +72,7 @@ TEST(examples, tuple_i32f32u16_less) {
 }
 
 TEST(examples, tuple_i32str_less) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "tuple_i32str_less");
 
   auto min =
@@ -122,7 +122,7 @@ TEST(examples, tuple_i32str_less) {
 }
 
 TEST(examples, soa_compute) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "soa_compute");
   // TODO: enable `const` qualifier in type system so we can avoid copying lvalues.
   // such as:
@@ -170,7 +170,7 @@ TEST(examples, soa_compute) {
 }
 
 TEST(examples, trivial_if) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "trivial_if");
   auto silly_function = builder.create_function<bool(bool)>("silly_function", [](cg::value<bool> is_true) {
     cg::if_(
@@ -183,7 +183,7 @@ TEST(examples, trivial_if) {
 }
 
 TEST(examples, trivial_while) {
-  auto comp = codegen::compiler{};
+  auto comp = codegen::compiler_context{};
   auto builder = codegen::module_builder(comp, "trivial_while");
   auto silly_function2 = builder.create_function<unsigned(unsigned)>("silly_function2", [](cg::value<unsigned> target) {
     auto var = cg::variable<unsigned>("var", cg::constant<unsigned>(0));
