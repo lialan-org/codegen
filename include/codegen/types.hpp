@@ -323,7 +323,7 @@ auto module_builder::create_function(std::string const& name, FunctionBuilder&& 
   assert(module_builder::current_builder() == this || !module_builder::current_builder());
   exited_block_ = false;
   auto fn_ref = detail::function_builder<FunctionType>{}(name, fb);
-  set_function_attributes(fn_ref);
+  fn_ref.set_function_attribute({"target-cpu", llvm::sys::getHostCPUName()});
   return fn_ref;
 }
 

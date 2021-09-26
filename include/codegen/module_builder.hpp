@@ -53,6 +53,10 @@ template<typename ReturnType, typename... Arguments> class function_ref {
 public:
   explicit function_ref(std::string const& name, llvm::Function* fn) : name_(name), function_(fn) {}
 
+  void set_function_attribute(std::pair<llvm::StringRef, llvm::StringRef> attribute_set) {
+    function_->addFnAttr(attribute_set.first, attribute_set.second);
+  }
+
   operator llvm::FunctionCallee() const { return function_; }
 
   operator llvm::Function *() const { return function_; }
@@ -206,13 +210,6 @@ public:
   }
 
 private:
-  void set_function_attributes(llvm::Function* fn, std::pair<llvm::StringRef, llvm::StringRef> attribute_set) {
-    fn->addFnAttr(attribute_set.first, attribute_set.second);
-  }
-
-  void set_function_attributes(llvm::Function* fn) {
-    set_function_attributes(fn, {"target-cpu", llvm::sys::getHostCPUName()});
-  }
 
   void declare_external_symbol(std::string const& name, void* address) { compiler_->add_symbol(name, address); }
 };
