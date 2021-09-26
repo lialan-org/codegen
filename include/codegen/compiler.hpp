@@ -134,8 +134,7 @@ public:
   }
 
   llvm::StructType *get_struct_type(std::string const &name) {
-    // TODO
-
+    llvm_unreachable("not implemented");
   }
 };
 

@@ -153,8 +153,8 @@ public:
       context_(std::make_unique<llvm::LLVMContext>()),
       ir_builder_(*context_),
       module_(std::make_unique<llvm::Module>(name, *context_)),
-      source_code_(*module_, std::filesystem::temp_directory_path() / ("cg_" + c.name()) / std::filesystem::path(name + ".c")),
-      function_(nullptr)
+      function_(nullptr),
+      source_code_(*module_, std::filesystem::temp_directory_path() / ("cg_" + c.name()) / std::filesystem::path(name + ".c"))
   {
     std::filesystem::create_directories(source_code_.source_file().parent_path());
   }
