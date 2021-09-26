@@ -36,7 +36,7 @@ inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
 
-  auto true_block = llvm::BasicBlock::Create(mb.context(), "true_block", mb.function_);
+  auto true_block = llvm::BasicBlock::Create(mb.context(), "true_block", mb.current_function());
   auto false_block = llvm::BasicBlock::Create(mb.context(), "false_block");
   auto merge_block = llvm::BasicBlock::Create(mb.context(), "merge_block");
 
@@ -57,7 +57,7 @@ inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   }
   mb.exited_block_ = false;
 
-  mb.function_->getBasicBlockList().push_back(false_block);
+  mb.current_function()->getBasicBlockList().push_back(false_block);
   mb.ir_builder().SetInsertPoint(false_block);
 
   mb.source_code_.enter_scope();
@@ -72,7 +72,7 @@ inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   }
   mb.exited_block_ = false;
 
-  mb.function_->getBasicBlockList().push_back(merge_block);
+  mb.current_function()->getBasicBlockList().push_back(merge_block);
   mb.ir_builder().SetInsertPoint(merge_block);
 }
 
@@ -84,7 +84,7 @@ inline void if_(Condition&& cnd, TrueBlock&& tb) {
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
 
-  auto true_block = llvm::BasicBlock::Create(mb.context(), "true_block", mb.function_);
+  auto true_block = llvm::BasicBlock::Create(mb.context(), "true_block", mb.current_function());
   auto merge_block = llvm::BasicBlock::Create(mb.context(), "merge_block");
 
   mb.ir_builder().CreateCondBr(cnd.eval(), true_block, merge_block);
@@ -104,7 +104,7 @@ inline void if_(Condition&& cnd, TrueBlock&& tb) {
   }
   mb.exited_block_ = false;
 
-  mb.function_->getBasicBlockList().push_back(merge_block);
+  mb.current_function()->getBasicBlockList().push_back(merge_block);
   mb.ir_builder().SetInsertPoint(merge_block);
 }
 
@@ -175,7 +175,7 @@ inline void while_(ConditionFn cnd_fn, Body bdy) {
   auto cnd = cnd_fn();
   mb.source_code_.add_line(fmt::format("while ({}) {{", cnd));
 
-  auto while_continue = llvm::BasicBlock::Create(mb.context(), "while_continue", mb.function_);
+  auto while_continue = llvm::BasicBlock::Create(mb.context(), "while_continue", mb.current_function());
   auto while_iteration = llvm::BasicBlock::Create(mb.context(), "while_iteration");
   auto while_break = llvm::BasicBlock::Create(mb.context(), "while_break");
 
@@ -188,7 +188,7 @@ inline void while_(ConditionFn cnd_fn, Body bdy) {
 
   mb.source_code_.enter_scope();
 
-  mb.function_->getBasicBlockList().push_back(while_iteration);
+  mb.current_function()->getBasicBlockList().push_back(while_iteration);
   mb.ir_builder().SetInsertPoint(while_iteration);
 
   assert(!mb.exited_block_);
@@ -204,7 +204,7 @@ inline void while_(ConditionFn cnd_fn, Body bdy) {
   }
   mb.exited_block_ = false;
 
-  mb.function_->getBasicBlockList().push_back(while_break);
+  mb.current_function()->getBasicBlockList().push_back(while_break);
   mb.ir_builder().SetInsertPoint(while_break);
 
   mb.current_loop_ = parent_loop;

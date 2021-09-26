@@ -238,8 +238,11 @@ public:
   template<typename FunctionBuilder>
   function_ref<ReturnType, Arguments...> operator()(std::string const& name, FunctionBuilder&& fb) {
     auto& mb = *current_builder;
+    assert(!mb.current_function() && "Cannot define a new function inside another funciton");
+
     auto fn_type = llvm::FunctionType::get(type<ReturnType>::llvm(), {type<Arguments>::llvm()...}, false);
     auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module());
+    mb.current_function() = fn;
 
     auto dbg_fn_scope = mb.source_code_.enter_function_scope<ReturnType, Arguments...>(name);
 
@@ -250,11 +253,12 @@ public:
     auto block = llvm::BasicBlock::Create(mb.context(), "entry", fn);
     mb.ir_builder().SetInsertPoint(block);
 
-    mb.function_ = fn;
+
     call_builder(std::index_sequence_for<Arguments...>{}, name, fb, fn->arg_begin());
 
     mb.source_code_.leave_function_scope();
 
+    mb.current_function() = nullptr;
     return function_ref<ReturnType, Arguments...>{name, fn};
   }
 };

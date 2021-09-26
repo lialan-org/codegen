@@ -39,7 +39,7 @@ public:
   explicit variable(std::string const& n) : name_(n) {
     auto& mb = *detail::current_builder;
 
-    auto alloca_builder = llvm::IRBuilder<>(&mb.function_->getEntryBlock(), mb.function_->getEntryBlock().begin());
+    auto alloca_builder = llvm::IRBuilder<>(&mb.current_function()->getEntryBlock(), mb.current_function()->getEntryBlock().begin());
     variable_ = alloca_builder.CreateAlloca(detail::type<Type>::llvm(), nullptr, name_);
 
     auto line_no = mb.source_code_.add_line(fmt::format("{} {};", detail::type<Type>::name(), name_));

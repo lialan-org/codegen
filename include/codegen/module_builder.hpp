@@ -66,11 +66,9 @@ class module_builder {
   std::unique_ptr<llvm::LLVMContext> context_;
   llvm::IRBuilder<> ir_builder_;
   std::unique_ptr<llvm::Module> module_;
+  llvm::Function* function_;
 
-public: // FIXME: proper encapsulation
-
-
-  llvm::Function* function_{};
+public:
 
   class source_code_generator {
     std::stringstream source_code_;
@@ -155,7 +153,8 @@ public:
       context_(std::make_unique<llvm::LLVMContext>()),
       ir_builder_(*context_),
       module_(std::make_unique<llvm::Module>(name, *context_)),
-      source_code_(*module_, std::filesystem::temp_directory_path() / ("cg_" + c.name()) / std::filesystem::path(name + ".c"))
+      source_code_(*module_, std::filesystem::temp_directory_path() / ("cg_" + c.name()) / std::filesystem::path(name + ".c")),
+      function_(nullptr)
   {
     std::filesystem::create_directories(source_code_.source_file().parent_path());
   }
@@ -182,6 +181,8 @@ public:
   llvm::IRBuilder<> &ir_builder() { return ir_builder_; }
   llvm::LLVMContext &context() {return *context_; }
   llvm::Module &module() { return *module_; }
+
+  llvm::Function *&current_function() { return function_; }
 
   [[nodiscard]] class module build() && {
     {
