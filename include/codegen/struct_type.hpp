@@ -45,7 +45,7 @@ public:
     std::vector<llvm::Type*> type_vec;
     ::codegen::detail::getTypeArray<Args...>(type_vec);
 
-    auto& mb = *detail::current_builder;
+    auto& mb = *codegen::module_builder::current_builder();
 
     llvm::StructType* const struct_type = llvm::StructType::create(mb.context(), name);
     struct_type->setBody(type_vec);
@@ -66,7 +66,7 @@ namespace detail {
     using struct_type = codegen::Struct<Args...>;
     static constexpr size_t alignment = alignof(codegen::Struct<Args...>);
     static llvm::DIType* dbg() {
-      return current_builder->dbg_builder_.createPointerType(type<int*>::dbg(), sizeof(codegen::Struct<Args...>) * 8);
+      return codegen::module_builder::current_builder()->dbg_builder_.createPointerType(type<int*>::dbg(), sizeof(codegen::Struct<Args...>) * 8);
     }
     static llvm::Type* llvm() { return Struct<Args...>::llvm(); }
     static std::string name() { return "StructType"; }

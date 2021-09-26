@@ -31,7 +31,7 @@ namespace codegen {
 template<ConditionType Condition, typename TrueBlock, typename FalseBlock,
          typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
 inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
@@ -79,7 +79,7 @@ inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
 template<typename Condition, typename TrueBlock,
          typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
 inline void if_(Condition&& cnd, TrueBlock&& tb) {
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
@@ -112,7 +112,7 @@ template<typename ReturnType, typename... Arguments, typename... Values>
 inline value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&&... args) {
   static_assert((std::is_same_v<Arguments, typename std::decay_t<Values>::value_type> && ...));
 
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
 
   {
     auto str = std::stringstream{};
@@ -133,7 +133,7 @@ inline value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, 
 template<typename Pointer, typename = std::enable_if_t<std::is_pointer_v<typename std::decay_t<Pointer>::value_type>>>
 inline auto load(Pointer ptr) {
   using value_type = std::remove_cv_t<std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>>;
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
 
   auto id = fmt::format("val{}", detail::id_counter++);
 
@@ -158,7 +158,7 @@ template<
                                                std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>>>>
 inline void store(Value v, Pointer ptr) {
   using value_type = std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>;
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("*{} = {}", ptr, v));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
@@ -168,7 +168,7 @@ inline void store(Value v, Pointer ptr) {
 template<typename ConditionFn, typename Body,
          typename = std::enable_if_t<std::is_same_v<typename std::invoke_result_t<ConditionFn>::value_type, bool>>>
 inline void while_(ConditionFn cnd_fn, Body bdy) {
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
 
   auto line_no = mb.source_code_.current_line() + 1;
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
@@ -211,7 +211,7 @@ inline void while_(ConditionFn cnd_fn, Body bdy) {
 }
 
 inline void break_() {
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
   assert(mb.current_loop_.break_block_);
 
   mb.exited_block_ = true;
@@ -223,7 +223,7 @@ inline void break_() {
 }
 
 inline void continue_() {
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
   assert(mb.current_loop_.continue_block_);
 
   mb.exited_block_ = true;
@@ -243,7 +243,7 @@ inline value<bool> false_() {
 }
 
 inline void return_() {
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
   auto line_no = mb.source_code_.add_line("return;");
   mb.exited_block_ = true;
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
@@ -252,7 +252,7 @@ inline void return_() {
 
 template<typename Value>
 inline void return_(Value v) {
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
   mb.exited_block_ = true;
   auto line_no = mb.source_code_.add_line(fmt::format("return {};", v));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));

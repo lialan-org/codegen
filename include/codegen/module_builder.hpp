@@ -68,6 +68,8 @@ class module_builder {
   std::unique_ptr<llvm::Module> module_;
   llvm::Function* function_;
 
+  static inline thread_local std::unique_ptr<module_builder> current_builder_;
+
 public:
 
   class source_code_generator {
@@ -147,6 +149,14 @@ public:
   loop current_loop_;
   bool exited_block_ = false;
 
+  static void register_current_builder(module_builder *builder) {
+    module_builder::current_builder_.reset(builder);
+  }
+
+  static void deregister_current_builder() { 
+    module_builder::current_builder_.release();
+  }
+
 public:
   module_builder(compiler& c, std::string const& name, bool enable_debug_codegen = true)
     : compiler_(&c),
@@ -157,6 +167,17 @@ public:
       source_code_(*module_, std::filesystem::temp_directory_path() / ("cg_" + c.name()) / std::filesystem::path(name + ".c"))
   {
     std::filesystem::create_directories(source_code_.source_file().parent_path());
+
+    assert(module_builder::current_builder_.get() == nullptr);
+    module_builder::register_current_builder(this);
+  }
+
+  ~module_builder() {
+    module_builder::deregister_current_builder();
+  }
+
+  static module_builder *current_builder() {
+    return module_builder::current_builder_.get();
   }
 
   llvm::DIBuilder &debug_builder() { return source_code_.debug_builder(); }
@@ -219,11 +240,5 @@ private:
     compiler_->add_symbol(name, address);
   }
 };
-
-namespace detail {
-
-inline thread_local module_builder* current_builder;
-
-} // namespace detail
 
 } // namespace codegen

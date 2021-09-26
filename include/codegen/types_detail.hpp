@@ -17,10 +17,10 @@ template<typename Type>
 struct type {
   static constexpr size_t alignment = alignof(Type);
   static llvm::DIType* dbg() {
-    return current_builder->debug_builder().createBasicType(
+    return codegen::module_builder::current_builder()->debug_builder().createBasicType(
         name(), sizeof(Type) * 8, std::is_signed_v<Type> ? llvm::dwarf::DW_ATE_signed : llvm::dwarf::DW_ATE_unsigned);
   }
-  static llvm::Type* llvm() { return llvm::Type::getIntNTy(current_builder->context(), sizeof(Type) * 8); }
+  static llvm::Type* llvm() { return llvm::Type::getIntNTy(codegen::module_builder::current_builder()->context(), sizeof(Type) * 8); }
   static std::string name() { return fmt::format("{}{}", std::is_signed_v<Type> ? 'i' : 'u', sizeof(Type) * 8); }
 };
 
@@ -28,7 +28,7 @@ template<>
 struct type<void> {
   static constexpr size_t alignment = 0;
   static llvm::DIType* dbg() { return nullptr; }
-  static llvm::Type* llvm() { return llvm::Type::getVoidTy(current_builder->context()); }
+  static llvm::Type* llvm() { return llvm::Type::getVoidTy(codegen::module_builder::current_builder()->context()); }
   static std::string name() { return "void"; }
 };
 
@@ -36,9 +36,9 @@ template<>
 struct type<bool> {
   static constexpr size_t alignment = alignof(bool);
   static llvm::DIType* dbg() {
-    return current_builder->debug_builder().createBasicType(name(), 8, llvm::dwarf::DW_ATE_boolean);
+    return codegen::module_builder::current_builder()->debug_builder().createBasicType(name(), 8, llvm::dwarf::DW_ATE_boolean);
   }
-  static llvm::Type* llvm() { return llvm::Type::getInt1Ty(current_builder->context()); }
+  static llvm::Type* llvm() { return llvm::Type::getInt1Ty(codegen::module_builder::current_builder()->context()); }
   static std::string name() { return "bool"; }
 };
 
@@ -46,9 +46,9 @@ template<>
 struct type<std::byte> {
   static constexpr size_t alignment = 1;
   static llvm::DIType* dbg() {
-    return current_builder->debug_builder().createBasicType(name(), 8, llvm::dwarf::DW_ATE_unsigned);
+    return codegen::module_builder::current_builder()->debug_builder().createBasicType(name(), 8, llvm::dwarf::DW_ATE_unsigned);
   }
-  static llvm::Type* llvm() { return llvm::Type::getInt8Ty(current_builder->context()); }
+  static llvm::Type* llvm() { return llvm::Type::getInt8Ty(codegen::module_builder::current_builder()->context()); }
   static std::string name() { return "byte"; }
 };
 
@@ -56,9 +56,9 @@ template<>
 struct type<float> {
   static constexpr size_t alignment = alignof(float);
   static llvm::DIType* dbg() {
-    return current_builder->debug_builder().createBasicType(name(), 32, llvm::dwarf::DW_ATE_float);
+    return codegen::module_builder::current_builder()->debug_builder().createBasicType(name(), 32, llvm::dwarf::DW_ATE_float);
   }
-  static llvm::Type* llvm() { return llvm::Type::getFloatTy(current_builder->context()); }
+  static llvm::Type* llvm() { return llvm::Type::getFloatTy(codegen::module_builder::current_builder()->context()); }
   static std::string name() { return "f32"; }
 };
 
@@ -66,9 +66,9 @@ template<>
 struct type<double> {
   static constexpr size_t alignment = alignof(double);
   static llvm::DIType* dbg() {
-    return current_builder->debug_builder().createBasicType(name(), 64, llvm::dwarf::DW_ATE_float);
+    return codegen::module_builder::current_builder()->debug_builder().createBasicType(name(), 64, llvm::dwarf::DW_ATE_float);
   }
-  static llvm::Type* llvm() { return llvm::Type::getDoubleTy(current_builder->context()); }
+  static llvm::Type* llvm() { return llvm::Type::getDoubleTy(codegen::module_builder::current_builder()->context()); }
   static std::string name() { return "f64"; }
 };
 
@@ -76,7 +76,7 @@ template<typename Type>
 struct type<Type*> {
   static constexpr size_t alignment = alignof(Type*);
   static llvm::DIType* dbg() {
-    return current_builder->debug_builder().createPointerType(type<std::remove_cv_t<Type>>::dbg(), sizeof(Type*) * 8);
+    return codegen::module_builder::current_builder()->debug_builder().createPointerType(type<std::remove_cv_t<Type>>::dbg(), sizeof(Type*) * 8);
   }
   static llvm::Type* llvm() { return type<std::remove_cv_t<Type>>::llvm()->getPointerTo(); }
   static std::string name() { return type<std::remove_cv_t<Type>>::name() + '*'; }
@@ -89,7 +89,7 @@ struct type<Type[N]> {
   static constexpr size_t alignment = alignof(Type);
 
   static llvm::DIType* dbg() {
-    return current_builder->debug_builder().createBasicType(name(), 32, llvm::dwarf::DW_TAG_array_type);
+    return codegen::module_builder::current_builder()->debug_builder().createBasicType(name(), 32, llvm::dwarf::DW_TAG_array_type);
   }
   static llvm::Type* llvm() {
     return llvm::ArrayType::get(type<Type>::llvm(), N);

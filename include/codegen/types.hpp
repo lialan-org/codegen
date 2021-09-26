@@ -182,11 +182,11 @@ namespace codegen::detail {
 inline llvm::Value* get_constant(LLVMPODType auto v) {
   using Type = decltype(v);
   if constexpr (LLVMIntegralType<Type>) {
-    return llvm::ConstantInt::get(current_builder->context(), llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
+    return llvm::ConstantInt::get(codegen::module_builder::current_builder()->context(), llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
   } else if constexpr (LLVMFloatingType<Type>) {
-    return llvm::ConstantFP::get(current_builder->context(), llvm::APFloat(v));
+    return llvm::ConstantFP::get(codegen::module_builder::current_builder()->context(), llvm::APFloat(v));
   } else if constexpr (LLVMBoolType<Type>) {
-    return llvm::ConstantInt::get(current_builder->context(), llvm::APInt(1, v, true));
+    return llvm::ConstantInt::get(codegen::module_builder::current_builder()->context(), llvm::APInt(1, v, true));
   } else {
     llvm_unreachable("Unsupported type");
   }
@@ -199,7 +199,7 @@ class function_builder<ReturnType(Arguments...)> {
 
   template<typename Argument>
   void prepare_argument(llvm::Function::arg_iterator args, size_t idx) {
-    auto& mb = *current_builder;
+    auto& mb = *codegen::module_builder::current_builder();
 
     auto it = args + idx;
     auto name = "arg" + std::to_string(idx);
@@ -217,7 +217,7 @@ class function_builder<ReturnType(Arguments...)> {
   template<size_t... Idx, typename FunctionBuilder>
   void call_builder(std::index_sequence<Idx...>, std::string const& name, FunctionBuilder&& fb,
                     llvm::Function::arg_iterator args) {
-    auto& mb = *current_builder;
+    auto& mb = *codegen::module_builder::current_builder();
 
     auto str = std::stringstream{};
     str << type<ReturnType>::name() << " " << name << "(";
@@ -237,7 +237,7 @@ class function_builder<ReturnType(Arguments...)> {
 public:
   template<typename FunctionBuilder>
   function_ref<ReturnType, Arguments...> operator()(std::string const& name, FunctionBuilder&& fb) {
-    auto& mb = *current_builder;
+    auto& mb = *codegen::module_builder::current_builder();
     assert(!mb.current_function() && "Cannot define a new function inside another funciton");
 
     auto fn_type = llvm::FunctionType::get(type<ReturnType>::llvm(), {type<Arguments>::llvm()...}, false);
@@ -269,7 +269,7 @@ template<typename ReturnType, typename... Arguments>
 class function_declaration_builder<ReturnType(Arguments...)> {
 public:
   function_ref<ReturnType, Arguments...> operator()(std::string const& name) {
-    auto& mb = *current_builder;
+    auto& mb = *codegen::module_builder::current_builder();
 
     auto fn_type = llvm::FunctionType::get(type<ReturnType>::llvm(), {type<Arguments>::llvm()...}, false);
     auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module());
@@ -293,7 +293,7 @@ public:
   bit_cast_impl(FromValue fv) : from_value_(fv) {}
 
   llvm::Value* eval() {
-    return detail::current_builder->ir_builder().CreateBitCast(from_value_.eval(), type<ToType>::llvm());
+    return module_builder::current_builder()->ir_builder().CreateBitCast(from_value_.eval(), type<ToType>::llvm());
   }
 
   friend std::ostream& operator<<(std::ostream& os, bit_cast_impl bci) {
@@ -316,7 +316,7 @@ public:
   cast_impl(FromValue fv) : from_value_(fv) {}
 
   llvm::Value* eval() {
-    auto& mb = *current_builder;
+    auto& mb = *codegen::module_builder::current_builder();
     if constexpr (std::is_floating_point_v<from_type> && std::is_floating_point_v<to_type>) {
       return mb.ir_builder().CreateFPCast(from_value_.eval(), type<to_type>::llvm());
     } else if constexpr (std::is_floating_point_v<from_type> && std::is_integral_v<to_type>) {
@@ -372,22 +372,18 @@ inline auto cast(FromValue v) {
 
 template<typename FunctionType, typename FunctionBuilder>
 auto module_builder::create_function(std::string const& name, FunctionBuilder&& fb) {
-  assert(detail::current_builder == this || !detail::current_builder);
-  auto prev_builder = std::exchange(detail::current_builder, this);
+  assert(module_builder::current_builder() == this || !module_builder::current_builder());
   exited_block_ = false;
   auto fn_ref = detail::function_builder<FunctionType>{}(name, fb);
   set_function_attributes(fn_ref);
-  detail::current_builder = prev_builder;
   return fn_ref;
 }
 
 template<typename FunctionType>
 auto module_builder::declare_external_function(std::string const& name, FunctionType* fn) {
-  assert(detail::current_builder == this || !detail::current_builder);
+  assert(module_builder::current_builder() == this || !module_builder::current_builder());
 
-  auto prev_builder = std::exchange(detail::current_builder, this);
   auto fn_ref = detail::function_declaration_builder<FunctionType>{}(name);
-  detail::current_builder = prev_builder;
 
   declare_external_symbol(name, reinterpret_cast<void*>(fn));
 

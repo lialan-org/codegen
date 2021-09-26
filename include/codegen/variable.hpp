@@ -37,7 +37,7 @@ class variable {
 
 public:
   explicit variable(std::string const& n) : name_(n) {
-    auto& mb = *detail::current_builder;
+    auto& mb = *module_builder::current_builder();
 
     auto alloca_builder = llvm::IRBuilder<>(&mb.current_function()->getEntryBlock(), mb.current_function()->getEntryBlock().begin());
     variable_ = alloca_builder.CreateAlloca(detail::type<Type>::llvm(), nullptr, name_);
@@ -57,13 +57,13 @@ public:
   variable(variable&&) = delete;
 
   value<Type> get() const {
-    auto v = detail::current_builder->ir_builder().CreateAlignedLoad(variable_, llvm::MaybeAlign(detail::type<Type>::alignment));
+    auto v = module_builder::current_builder()->ir_builder().CreateAlignedLoad(variable_, llvm::MaybeAlign(detail::type<Type>::alignment));
     return value<Type>{v, name_};
   }
 
   template<typename V>
   void set(V const& v) requires IsValue<V> && std::same_as<Type, typename V::value_type> {
-    auto& mb = *detail::current_builder;
+    auto& mb = *module_builder::current_builder();
     auto line_no = mb.source_code_.add_line(fmt::format("{} = {};", name_, v));
     mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
     mb.ir_builder().CreateAlignedStore(v.eval(), variable_, llvm::MaybeAlign(detail::type<Type>::alignment));
@@ -83,7 +83,7 @@ public:
   operator[](Value const& v) & requires IsArray<T> && LLVMIntegralType<typename Value::value_type> {
     using ElementType = typename std::remove_all_extents_t<T>;
 
-    auto& mb = *detail::current_builder;
+    auto& mb = *module_builder::current_builder();
 
     auto idx = v.eval();
 
@@ -110,7 +110,7 @@ public:
       requires IsArray<T> &&
                LLVMIntegralType<typename IndexValue::value_type> && 
                std::same_as<std::remove_all_extents_t<T>, typename Value::value_type>  {
-    auto& mb = *detail::current_builder;
+    auto& mb = *module_builder::current_builder();
     auto idx = idx_v.eval();
 
     if constexpr (sizeof(typename IndexValue::value_type) < sizeof(uint64_t)) {
@@ -134,7 +134,7 @@ public:
 	    value<std::remove_all_extents_t<T>>>
   operator[](Value const& v) && {
     //static_assert(sizeof(Value::value_type) < sizeof(int64_t));
-    auto& mb = *detail::current_builder;
+    auto& mb = *module_builder::current_builder();
 
     auto idx = v.eval();
 

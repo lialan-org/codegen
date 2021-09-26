@@ -32,7 +32,7 @@ using namespace codegen;
 
 void memcpy(PointerValue auto dst, PointerValue auto src, Size auto n) {
   using namespace detail;
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcpy({}, {}, {});", dst, src, n));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no, 1));
@@ -43,7 +43,7 @@ void memcpy(PointerValue auto dst, PointerValue auto src, Size auto n) {
 
 value<int> memcmp(Pointer auto src1, Pointer auto src2, Size auto n) {
   using namespace detail;
-  auto& mb = *detail::current_builder;
+  auto& mb = *module_builder::current_builder();
 
   auto fn_type = llvm::FunctionType::get(type<int>::llvm(),
                                          {type<void*>::llvm(), type<void*>::llvm(), type<size_t>::llvm()}, false);
@@ -68,7 +68,7 @@ public:
   explicit bswap_impl(Value v) : value_(v) {}
 
   llvm::Value* eval() {
-    return codegen::detail::current_builder->ir_builder().CreateUnaryIntrinsic(llvm::Intrinsic::bswap, value_.eval());
+    return codegen::module_builder::current_builder()->ir_builder().CreateUnaryIntrinsic(llvm::Intrinsic::bswap, value_.eval());
   }
 
   friend std::ostream& operator<<(std::ostream& os, bswap_impl bi) { return os << "bswap(" << bi.value_ << ")"; }
