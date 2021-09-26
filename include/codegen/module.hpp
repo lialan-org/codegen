@@ -31,10 +31,8 @@ class module {
   llvm::orc::MangleAndInterner mangle_;
 
 private:
-  module(std::unique_ptr<llvm::orc::LLJIT> lljit, llvm::orc::MangleAndInterner const &mangle)
-    : lljit_(std::move(lljit)),
-      mangle_(std::move(mangle))
-  { }
+  module(std::unique_ptr<llvm::orc::LLJIT> lljit, llvm::orc::MangleAndInterner const& mangle)
+      : lljit_(std::move(lljit)), mangle_(std::move(mangle)) {}
 
   friend class module_builder;
 

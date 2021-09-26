@@ -27,6 +27,7 @@
 
 #include <llvm/ExecutionEngine/JITEventListener.h>
 
+#include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/Core.h>
 #include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
@@ -34,7 +35,6 @@
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
-#include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 
@@ -63,67 +63,55 @@ class compiler {
   friend class module_builder;
 
 private:
-  explicit compiler(std::string const &context_name, llvm::orc::JITTargetMachineBuilder tmb, std::string const& name = "LLVM_JIT")
-    : data_layout_(cantFail(tmb.getDefaultDataLayoutForTarget())),
-      mangle_(session_, data_layout_),
-      gdb_listener_(llvm::JITEventListener::createGDBRegistrationListener()),
-      name_(name)
-  {
+  explicit compiler(std::string const& context_name, llvm::orc::JITTargetMachineBuilder tmb,
+                    std::string const& name = "LLVM_JIT")
+      : data_layout_(cantFail(tmb.getDefaultDataLayoutForTarget())), mangle_(session_, data_layout_),
+        gdb_listener_(llvm::JITEventListener::createGDBRegistrationListener()), name_(name) {
     auto jtmb = cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
-    lljit_ = cantFail((llvm::orc::LLJITBuilder()
-                        .setJITTargetMachineBuilder(std::move(jtmb)) 
-                        .setObjectLinkingLayerCreator([&](llvm::orc::ExecutionSession &ES,
-                                                          const llvm::Triple &TT) {
-                            auto GetMemMgr = []() {
-                              return std::make_unique<llvm::SectionMemoryManager>();
-                            };
-                            auto ObjLinkingLayer =
-                              std::make_unique<llvm::orc::RTDyldObjectLinkingLayer>(
-                              ES, std::move(GetMemMgr));
+    lljit_ = cantFail(
+        (llvm::orc::LLJITBuilder()
+             .setJITTargetMachineBuilder(std::move(jtmb))
+             .setObjectLinkingLayerCreator([&](llvm::orc::ExecutionSession& ES, const llvm::Triple& TT) {
+               auto GetMemMgr = []() { return std::make_unique<llvm::SectionMemoryManager>(); };
+               auto ObjLinkingLayer = std::make_unique<llvm::orc::RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 
-                            // Register the event listener.
-                            ObjLinkingLayer->registerJITEventListener(
-                              *llvm::JITEventListener::createGDBRegistrationListener());
+               // Register the event listener.
+               ObjLinkingLayer->registerJITEventListener(*llvm::JITEventListener::createGDBRegistrationListener());
 
-                            // Make sure the debug info sections aren't stripped.
-                            ObjLinkingLayer->setProcessAllSections(true);
-                            return ObjLinkingLayer;})
-                        .create()));
+               // Make sure the debug info sections aren't stripped.
+               ObjLinkingLayer->setProcessAllSections(true);
+               return ObjLinkingLayer;
+             })
+             .create()));
 
     lljit_->getMainJITDylib().addGenerator(
         // TODO: should we expose all symbols to JIT?
         cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-                              data_layout_.getGlobalPrefix(),
-                              [MainName = mangle_("main")](const llvm::orc::SymbolStringPtr &Name) {
-                                return Name != MainName;
-                              })));
+            data_layout_.getGlobalPrefix(),
+            [MainName = mangle_("main")](const llvm::orc::SymbolStringPtr& Name) { return Name != MainName; })));
   }
 
 public:
   compiler(std::string context_name = "codegen")
-    : compiler(context_name, cantFail(llvm::orc::JITTargetMachineBuilder::detectHost()))
-    {
-    }
+      : compiler(context_name, cantFail(llvm::orc::JITTargetMachineBuilder::detectHost())) {}
 
   compiler(compiler const&) = delete;
   compiler(compiler&&) = delete;
 
   void add_symbol(std::string const& name, void* address) {
     cantFail(lljit_->getMainJITDylib().define(llvm::orc::absoluteSymbols(
-      {{lljit_->mangleAndIntern(std::move(name)), llvm::JITEvaluatedSymbol::fromPointer(address)}}
-    )));
+        {{lljit_->mangleAndIntern(std::move(name)), llvm::JITEvaluatedSymbol::fromPointer(address)}})));
   }
 
   llvm::Error compileModule(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::LLVMContext> context) {
     return lljit_->addIRModule(llvm::orc::ThreadSafeModule(std::move(module), std::move(context)));
   }
 
-  const std::string &name() { return name_; }
+  const std::string& name() { return name_; }
 
-  template<typename... ElementTypes>
-  void add_aligned_struct_type(std::string const &name) {
+  template<typename... ElementTypes> void add_aligned_struct_type(std::string const& name) {
     // build type;
-    llvm::StructType * llvm_type = nullptr;
+    llvm::StructType* llvm_type = nullptr;
 
     // check if we are overwriting any existing types.
 
@@ -133,9 +121,7 @@ public:
     }
   }
 
-  llvm::StructType *get_struct_type(std::string const &name) {
-    llvm_unreachable("not implemented");
-  }
+  llvm::StructType* get_struct_type(std::string const& name) { llvm_unreachable("not implemented"); }
 };
 
 } // namespace codegen

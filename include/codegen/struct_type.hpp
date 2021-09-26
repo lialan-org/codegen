@@ -8,21 +8,19 @@
 namespace codegen {
 
 namespace detail {
-  template<typename T>
-  llvm::Type* getType() {
-    return type<T>::llvm();
-  }
+template<typename T> llvm::Type* getType() {
+  return type<T>::llvm();
+}
 
-  template<typename FirstType, typename ... OtherTypes>
-  void getTypeArray(std::vector<llvm::Type*> &type_vec) {
-    type_vec.push_back(getType<FirstType>());
-    if constexpr (sizeof...(OtherTypes) == 1) {
-      type_vec.push_back(getType<OtherTypes...>());
-    } else {
-      getTypeArray<OtherTypes...>(type_vec);
-    }
+template<typename FirstType, typename... OtherTypes> void getTypeArray(std::vector<llvm::Type*>& type_vec) {
+  type_vec.push_back(getType<FirstType>());
+  if constexpr (sizeof...(OtherTypes) == 1) {
+    type_vec.push_back(getType<OtherTypes...>());
+  } else {
+    getTypeArray<OtherTypes...>(type_vec);
   }
 }
+} // namespace detail
 
 // Supposely, this would work like this:
 // Declare:
@@ -33,9 +31,7 @@ namespace detail {
 // auto s = codegen::variable<ExampleStruct>("example_struct");
 // s.get<int>(1).set(2_i32);
 
-
-template<typename... Args>
-class Struct {
+template<typename... Args> class Struct {
 public:
   static_assert(sizeof...(Args) > 0);
 
@@ -53,7 +49,7 @@ public:
   }
 
   // declare()
-  // 
+  //
   // llvm()
   //
   // dbg()
@@ -61,17 +57,17 @@ private:
 };
 
 namespace detail {
-  template<typename... Args>
-  struct type<codegen::Struct<Args...>> {
-    using struct_type = codegen::Struct<Args...>;
-    static constexpr size_t alignment = alignof(codegen::Struct<Args...>);
-    static llvm::DIType* dbg() {
-      return codegen::module_builder::current_builder()->dbg_builder_.createPointerType(type<int*>::dbg(), sizeof(codegen::Struct<Args...>) * 8);
-    }
-    static llvm::Type* llvm() { return Struct<Args...>::llvm(); }
-    static std::string name() { return "StructType"; }
-  };
-}
+template<typename... Args> struct type<codegen::Struct<Args...>> {
+  using struct_type = codegen::Struct<Args...>;
+  static constexpr size_t alignment = alignof(codegen::Struct<Args...>);
+  static llvm::DIType* dbg() {
+    return codegen::module_builder::current_builder()->dbg_builder_.createPointerType(
+        type<int*>::dbg(), sizeof(codegen::Struct<Args...>) * 8);
+  }
+  static llvm::Type* llvm() { return Struct<Args...>::llvm(); }
+  static std::string name() { return "StructType"; }
+};
+} // namespace detail
 
 } // namespace codegen
 

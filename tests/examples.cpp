@@ -29,8 +29,7 @@
 namespace cg = codegen;
 using namespace cg::literals;
 
-template<typename T>
-size_t less_cmp(cg::value<std::byte*> a_ptr, cg::value<std::byte*> b_ptr, size_t off) {
+template<typename T> size_t less_cmp(cg::value<std::byte*> a_ptr, cg::value<std::byte*> b_ptr, size_t off) {
   auto a_val = cg::load(cg::bit_cast<T*>(a_ptr + cg::constant<uint64_t>(off)));
   auto b_val = cg::load(cg::bit_cast<T*>(b_ptr + cg::constant<uint64_t>(off)));
   cg::if_(a_val < b_val, [&] { cg::return_(cg::true_()); });
@@ -145,7 +144,7 @@ TEST(examples, soa_compute) {
   auto compute_ptr = module.get_address(compute);
   compute_ptr(0, nullptr, nullptr, nullptr, 0);
 
-  auto test = [&](int32_t a, std::vector<int32_t> const &b, std::vector<int32_t> const &c) {
+  auto test = [&](int32_t a, std::vector<int32_t> const& b, std::vector<int32_t> const& c) {
     EXPECT_EQ(b.size(), c.size());
     auto d = std::make_unique<int32_t[]>(b.size());
     compute_ptr(a, b.data(), c.data(), d.get(), b.size());
@@ -186,15 +185,11 @@ TEST(examples, trivial_if) {
 TEST(examples, trivial_while) {
   auto comp = codegen::compiler{};
   auto builder = codegen::module_builder(comp, "trivial_while");
-auto silly_function2 = builder.create_function<unsigned(unsigned)>("silly_function2",
-    [](cg::value<unsigned> target) {
-      auto var = cg::variable<unsigned>("var", cg::constant<unsigned>(0));
-      cg::while_([&] { return var.get() < target; },
-        [&] {
-          var.set(var.get() + cg::constant<unsigned>(1));
-        });
-      cg::return_(var.get());
-    });
+  auto silly_function2 = builder.create_function<unsigned(unsigned)>("silly_function2", [](cg::value<unsigned> target) {
+    auto var = cg::variable<unsigned>("var", cg::constant<unsigned>(0));
+    cg::while_([&] { return var.get() < target; }, [&] { var.set(var.get() + cg::constant<unsigned>(1)); });
+    cg::return_(var.get());
+  });
   auto module = std::move(builder).build();
   auto fn = module.get_address(silly_function2);
   EXPECT_EQ(fn(0), 0);

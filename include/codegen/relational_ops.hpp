@@ -52,8 +52,10 @@ public:
   llvm::Value* eval() const {
     if constexpr (std::is_integral_v<operand_type>) {
       switch (Op) {
-      case relational_operation_type::eq: return codegen::module_builder::current_builder()->ir_builder().CreateICmpEQ(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ne: return codegen::module_builder::current_builder()->ir_builder().CreateICmpNE(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::eq:
+        return codegen::module_builder::current_builder()->ir_builder().CreateICmpEQ(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::ne:
+        return codegen::module_builder::current_builder()->ir_builder().CreateICmpNE(lhs_.eval(), rhs_.eval());
       case relational_operation_type::ge:
         if constexpr (std::is_signed_v<operand_type>) {
           return codegen::module_builder::current_builder()->ir_builder().CreateICmpSGE(lhs_.eval(), rhs_.eval());
@@ -81,12 +83,18 @@ public:
       }
     } else {
       switch (Op) {
-      case relational_operation_type::eq: return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOEQ(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ne: return codegen::module_builder::current_builder()->ir_builder().CreateFCmpONE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ge: return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOGE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::gt: return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOGT(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::le: return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOLE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::lt: return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOLT(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::eq:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOEQ(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::ne:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFCmpONE(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::ge:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOGE(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::gt:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOGT(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::le:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOLE(lhs_.eval(), rhs_.eval());
+      case relational_operation_type::lt:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOLT(lhs_.eval(), rhs_.eval());
       }
     }
   }

@@ -1,6 +1,5 @@
 #include "codegen/codegen.hpp"
 
-
 int32_t table1[][2] = {{0, 1}, {2, 3}, {4, 5}};
 int32_t table2[][2] = {{2, 9}, {8, 7}, {6, 5}};
 
@@ -42,7 +41,7 @@ void print_probe(int x, int y) {
   printf("    Found join: <%d, %d>\n", x, y);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   INIT_LLVM_ENV(argc, argv);
 
   auto comp = codegen::compiler{};

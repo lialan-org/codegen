@@ -154,7 +154,6 @@ TEST(relational_ops, unsigned_integer) {
   EXPECT_EQ(lt2_ptr(-5, -4), true);
 }
 
-
 TEST(relational_ops, floating_point) {
   auto comp = codegen::compiler{};
   auto builder = codegen::module_builder(comp, "float");

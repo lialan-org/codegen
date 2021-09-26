@@ -8,138 +8,98 @@
 
 namespace codegen {
 
-template <class... T>
-constexpr bool always_false = false;
+template<class... T> constexpr bool always_false = false;
 
-template<typename T>
-concept SupportedLLVMType = requires (T t) {
+template<typename T> concept SupportedLLVMType = requires(T t) {
   codegen::detail::type<T>::value_type;
 };
 
-template<typename T>
-concept IsPlainType = !std::is_volatile_v<T> &&
-                      !std::is_reference_v<T>;
+template<typename T> concept IsPlainType = !std::is_volatile_v<T> && !std::is_reference_v<T>;
 
-template<typename T>
-concept IsPointer = std::is_pointer_v<T> && IsPlainType<T>;
+template<typename T> concept IsPointer = std::is_pointer_v<T>&& IsPlainType<T>;
 
-template<typename T>
-concept LLVMBoolType = IsPlainType<T> && std::same_as<T, bool>;
+template<typename T> concept LLVMBoolType = IsPlainType<T>&& std::same_as<T, bool>;
 
-template<typename T>
-concept LLVMVoidType = IsPlainType<T> && std::same_as<T, void>;
+template<typename T> concept LLVMVoidType = IsPlainType<T>&& std::same_as<T, void>;
 
 template<typename T>
 concept LLVMIntegralType = IsPlainType<T> &&
-                           (std::is_integral_v<T> ||
-                           std::same_as<T, int8_t> ||
-                           std::same_as<T, uint8_t>);
+                           (std::is_integral_v<T> || std::same_as<T, int8_t> || std::same_as<T, uint8_t>);
+
+template<typename T> concept LLVMFloatingType = IsPlainType<T>&& std::is_floating_point_v<T>;
+
+template<typename T> concept LLVMArithmeticType = LLVMIntegralType<T> || LLVMFloatingType<T>;
 
 template<typename T>
-concept LLVMFloatingType = IsPlainType<T> && std::is_floating_point_v<T>;
+concept LLVMPODType = std::same_as<T, std::byte> || LLVMIntegralType<T> || LLVMVoidType<T> || LLVMFloatingType<T>;
+
+template<typename T> concept LLVMBytePointerType = IsPointer<T>&& std::same_as<std::remove_pointer_t<T>, std::byte>;
+
+template<typename T> concept LLVMIntegralPointerType = IsPointer<T>&& LLVMIntegralType<std::remove_pointer_t<T>>;
+
+template<typename T> concept LLVMFloatingPointerType = IsPointer<T>&& LLVMFloatingType<std::remove_pointer_t<T>>;
+
+template<typename T> concept LLVMVoidPointerType = IsPointer<T>&& LLVMVoidType<std::remove_pointer_t<T>>;
 
 template<typename T>
-concept LLVMArithmeticType = LLVMIntegralType<T> || LLVMFloatingType<T>;
+concept LLVMPointerPointerType = IsPointer<T> && (LLVMIntegralPointerType<std::remove_pointer_t<T>> ||
+                                                  LLVMFloatingPointerType<std::remove_pointer_t<T>> ||
+                                                  LLVMVoidPointerType<std::remove_pointer_t<T>> ||
+                                                  LLVMBytePointerType<std::remove_pointer_t<T>>);
 
 template<typename T>
-concept LLVMPODType = std::same_as<T, std::byte> ||
-                      LLVMIntegralType<T> ||
-                      LLVMVoidType<T> ||
-                      LLVMFloatingType<T>;
+concept LLVMPointerType = LLVMIntegralPointerType<T> || LLVMFloatingPointerType<T> || LLVMVoidPointerType<T> ||
+                          LLVMBytePointerType<T> || LLVMPointerPointerType<T>;
 
 template<typename T>
-concept LLVMBytePointerType = IsPointer<T> && std::same_as<std::remove_pointer_t<T>, std::byte>;
+concept LLVMArrayType = std::is_array_v<T>&& std::extent_v<T> != 0 && LLVMPODType<std::remove_all_extents_t<T>>;
 
-template<typename T>
-concept LLVMIntegralPointerType = IsPointer<T> && LLVMIntegralType<std::remove_pointer_t<T>>;
+template<typename T> concept LLVMType = LLVMPODType<T> || LLVMPointerType<T> || LLVMArrayType<T>;
 
-template<typename T>
-concept LLVMFloatingPointerType = IsPointer<T> && LLVMFloatingType<std::remove_pointer_t<T>>;
-
-template<typename T>
-concept LLVMVoidPointerType = IsPointer<T> && LLVMVoidType<std::remove_pointer_t<T>>;
-
-template<typename T>
-concept LLVMPointerPointerType = IsPointer<T> &&
-                                (LLVMIntegralPointerType<std::remove_pointer_t<T>> || 
-                                 LLVMFloatingPointerType<std::remove_pointer_t<T>> ||
-                                 LLVMVoidPointerType<std::remove_pointer_t<T>> ||
-                                 LLVMBytePointerType<std::remove_pointer_t<T>>);
-
-template<typename T>
-concept LLVMPointerType = LLVMIntegralPointerType<T> ||
-                          LLVMFloatingPointerType<T> ||
-                          LLVMVoidPointerType<T> ||
-                          LLVMBytePointerType<T> ||
-                          LLVMPointerPointerType<T>;
-
-template<typename T>
-concept LLVMArrayType = std::is_array_v<T> &&
-                        std::extent_v<T> != 0 &&
-                        LLVMPODType<std::remove_all_extents_t<T>>;
-
-template<typename T>
-concept LLVMType = LLVMPODType<T> ||
-                   LLVMPointerType<T> ||
-                   LLVMArrayType<T>;
-
-template<typename T>
-concept LLVMTypeWrapper = requires (T t) {
+template<typename T> concept LLVMTypeWrapper = requires(T t) {
   typename T::value_type;
   LLVMType<typename T::value_type>;
 };
 
-template<typename T>
-concept Pointer = LLVMTypeWrapper<T> && std::is_pointer_v<typename T::value_type>;
+template<typename T> concept Pointer = LLVMTypeWrapper<T>&& std::is_pointer_v<typename T::value_type>;
 
-template<typename T>
-concept ConditionType = std::is_same_v<typename std::decay_t<T>::value_type, bool>;
+template<typename T> concept ConditionType = std::is_same_v<typename std::decay_t<T>::value_type, bool>;
 
 template<typename S>
 concept Size = LLVMTypeWrapper<S> &&
-              (std::is_same_v<typename S::value_type, int32_t> ||
-               std::is_same_v<typename S::value_type, int64_t> ||
-               std::is_same_v<typename S::value_type, uint32_t> ||
-               std::is_same_v<typename S::value_type, uint64_t>);
+               (std::is_same_v<typename S::value_type, int32_t> || std::is_same_v<typename S::value_type, int64_t> ||
+                std::is_same_v<typename S::value_type, uint32_t> || std::is_same_v<typename S::value_type, uint64_t>);
 
-template<typename T>
-concept Integral = LLVMTypeWrapper<T> && std::is_integral_v<T>;
+template<typename T> concept Integral = LLVMTypeWrapper<T>&& std::is_integral_v<T>;
 
-template<typename T>
-concept IsArray = std::is_array_v<T> && LLVMType<std::remove_all_extents_t<T>>;
+template<typename T> concept IsArray = std::is_array_v<T>&& LLVMType<std::remove_all_extents_t<T>>;
 
-template<typename T>
-concept Bool = requires (T t) {
+template<typename T> concept Bool = requires(T t) {
   LLVMTypeWrapper<T>;
   std::same_as<typename T::value_type, bool>;
 };
 
-template<typename T>
-concept Void = requires (T t) {
+template<typename T> concept Void = requires(T t) {
   LLVMTypeWrapper<T>;
   std::same_as<typename T::value_type, void>;
 };
 
-template<typename T>
-concept Byte = requires (T t) {
+template<typename T> concept Byte = requires(T t) {
   LLVMTypeWrapper<T>;
   std::same_as<typename T::value_type, std::byte>;
 };
 
-template<typename T>
-concept Float = requires (T t) {
+template<typename T> concept Float = requires(T t) {
   LLVMTypeWrapper<T>;
   std::same_as<typename T::value_type, float>;
 };
 
-template<typename T>
-concept Double = requires (T t) {
+template<typename T> concept Double = requires(T t) {
   LLVMTypeWrapper<T>;
   std::same_as<typename T::value_type, double>;
 };
 
-template<LLVMType Type>
-class value {
+template<LLVMType Type> class value {
   llvm::Value* value_;
   std::string name_;
 
@@ -153,27 +113,22 @@ public:
 
   using value_type = Type;
 
-  operator llvm::Value*() const noexcept { return value_; }
+  operator llvm::Value *() const noexcept { return value_; }
   llvm::Value* eval() const { return value_; }
   friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
 };
 
-template<typename T>
-concept IsValue = requires (T t) {
+template<typename T> concept IsValue = requires(T t) {
   detail::is_instance<T, value>{};
 };
 
-template<typename T>
-concept IntegralValue = IsValue<T> && LLVMIntegralType<typename T::value_type>;
+template<typename T> concept IntegralValue = IsValue<T>&& LLVMIntegralType<typename T::value_type>;
 
-template<typename T>
-concept FloatingValue = IsValue<T> && LLVMFloatingType<typename T::value_type>;
+template<typename T> concept FloatingValue = IsValue<T>&& LLVMFloatingType<typename T::value_type>;
 
-template<typename T>
-concept PointerValue = IsValue<T> && LLVMPointerType<typename T::value_type>;
+template<typename T> concept PointerValue = IsValue<T>&& LLVMPointerType<typename T::value_type>;
 
-template<typename T>
-concept ArithmeticValue = IsValue<T> && LLVMArithmeticType<typename T::value_type>;
+template<typename T> concept ArithmeticValue = IsValue<T>&& LLVMArithmeticType<typename T::value_type>;
 
 } // namespace codegen
 
@@ -182,7 +137,8 @@ namespace codegen::detail {
 inline llvm::Value* get_constant(LLVMPODType auto v) {
   using Type = decltype(v);
   if constexpr (LLVMIntegralType<Type>) {
-    return llvm::ConstantInt::get(codegen::module_builder::current_builder()->context(), llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
+    return llvm::ConstantInt::get(codegen::module_builder::current_builder()->context(),
+                                  llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
   } else if constexpr (LLVMFloatingType<Type>) {
     return llvm::ConstantFP::get(codegen::module_builder::current_builder()->context(), llvm::APFloat(v));
   } else if constexpr (LLVMBoolType<Type>) {
@@ -194,24 +150,23 @@ inline llvm::Value* get_constant(LLVMPODType auto v) {
 
 template<typename> class function_builder;
 
-template<typename ReturnType, typename... Arguments>
-class function_builder<ReturnType(Arguments...)> {
+template<typename ReturnType, typename... Arguments> class function_builder<ReturnType(Arguments...)> {
 
-  template<typename Argument>
-  void prepare_argument(llvm::Function::arg_iterator args, size_t idx) {
+  template<typename Argument> void prepare_argument(llvm::Function::arg_iterator args, size_t idx) {
     auto& mb = *codegen::module_builder::current_builder();
 
     auto it = args + idx;
     auto name = "arg" + std::to_string(idx);
     it->setName(name);
 
-    auto &debug_builder = mb.debug_builder();
+    auto& debug_builder = mb.debug_builder();
 
-    auto dbg_arg = debug_builder.createParameterVariable(mb.source_code_.debug_scope(), name, idx + 1, mb.source_code_.debug_file(),
-                                                           mb.source_code_.current_line(), type<Argument>::dbg());
+    auto dbg_arg = debug_builder.createParameterVariable(mb.source_code_.debug_scope(), name, idx + 1,
+                                                         mb.source_code_.debug_file(), mb.source_code_.current_line(),
+                                                         type<Argument>::dbg());
     mb.debug_builder().insertDbgValueIntrinsic(&*(args + idx), dbg_arg, debug_builder.createExpression(),
-                                            mb.get_debug_location(mb.source_code_.current_line()),
-                                            mb.ir_builder().GetInsertBlock());
+                                               mb.get_debug_location(mb.source_code_.current_line()),
+                                               mb.ir_builder().GetInsertBlock());
   }
 
   template<size_t... Idx, typename FunctionBuilder>
@@ -253,7 +208,6 @@ public:
     auto block = llvm::BasicBlock::Create(mb.context(), "entry", fn);
     mb.ir_builder().SetInsertPoint(block);
 
-
     call_builder(std::index_sequence_for<Arguments...>{}, name, fb, fn->arg_begin());
 
     mb.source_code_.leave_function_scope();
@@ -265,8 +219,7 @@ public:
 
 template<typename> class function_declaration_builder;
 
-template<typename ReturnType, typename... Arguments>
-class function_declaration_builder<ReturnType(Arguments...)> {
+template<typename ReturnType, typename... Arguments> class function_declaration_builder<ReturnType(Arguments...)> {
 public:
   function_ref<ReturnType, Arguments...> operator()(std::string const& name) {
     auto& mb = *codegen::module_builder::current_builder();
@@ -278,8 +231,7 @@ public:
   }
 };
 
-template<typename FromValue, typename ToType>
-class bit_cast_impl {
+template<typename FromValue, typename ToType> class bit_cast_impl {
   FromValue from_value_;
 
   using from_type = typename FromValue::value_type;
@@ -301,8 +253,7 @@ public:
   }
 };
 
-template<typename FromValue, typename ToType>
-class cast_impl {
+template<typename FromValue, typename ToType> class cast_impl {
   FromValue from_value_;
 
   using from_type = typename FromValue::value_type;
@@ -349,8 +300,7 @@ public:
 
 namespace codegen {
 
-template<LLVMArithmeticType Type>
-inline value<Type> constant(Type v) {
+template<LLVMArithmeticType Type> inline value<Type> constant(Type v) {
   return value<Type>{detail::get_constant<Type>(v), [&] {
                        if constexpr (std::same_as<Type, bool>) {
                          return v ? "true" : "false";
@@ -360,13 +310,11 @@ inline value<Type> constant(Type v) {
                      }()};
 }
 
-template<typename ToType, typename FromValue>
-inline auto bit_cast(FromValue v) {
+template<typename ToType, typename FromValue> inline auto bit_cast(FromValue v) {
   return detail::bit_cast_impl<FromValue, ToType>(v);
 }
 
-template<typename ToType, typename FromValue>
-inline auto cast(FromValue v) {
+template<typename ToType, typename FromValue> inline auto cast(FromValue v) {
   return detail::cast_impl<FromValue, ToType>(v);
 }
 
@@ -391,16 +339,15 @@ auto module_builder::declare_external_function(std::string const& name, Function
 }
 
 template<typename ReturnType, typename... Arguments>
-llvm::DISubprogram *module_builder::source_code_generator::enter_function_scope(std::string const& function_name) {
+llvm::DISubprogram* module_builder::source_code_generator::enter_function_scope(std::string const& function_name) {
   std::vector<llvm::Metadata*> dbg_types = {detail::type<ReturnType>::dbg(), detail::type<Arguments>::dbg()...};
   auto dbg_fn_type = dbg_builder_.createSubroutineType(dbg_builder_.getOrCreateTypeArray(dbg_types));
   auto dbg_fn_scope = dbg_builder_.createFunction(
-      debug_scope(), function_name, function_name, debug_file(), current_line(),
-      dbg_fn_type, current_line(), llvm::DINode::FlagPrototyped,
+      debug_scope(), function_name, function_name, debug_file(), current_line(), dbg_fn_type, current_line(),
+      llvm::DINode::FlagPrototyped,
       llvm::DISubprogram::DISPFlags::SPFlagDefinition | llvm::DISubprogram::DISPFlags::SPFlagOptimized);
   dbg_scopes_.push(dbg_fn_scope);
   return dbg_fn_scope;
 }
 
 } // namespace codegen
-

@@ -141,11 +141,10 @@ inline auto load(Pointer ptr) {
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
   auto v = mb.ir_builder().CreateAlignedLoad(ptr.eval(), llvm::MaybeAlign(detail::type<value_type>::alignment));
 
-  auto dbg_value =
-      mb.debug_builder().createAutoVariable(mb.source_code_.debug_scope(), id, mb.source_code_.debug_file(), line_no, detail::type<value_type>::dbg());
+  auto dbg_value = mb.debug_builder().createAutoVariable(
+      mb.source_code_.debug_scope(), id, mb.source_code_.debug_file(), line_no, detail::type<value_type>::dbg());
   mb.debug_builder().insertDbgValueIntrinsic(v, dbg_value, mb.debug_builder().createExpression(),
-                                          mb.get_debug_location(line_no),
-                                          mb.ir_builder().GetInsertBlock());
+                                             mb.get_debug_location(line_no), mb.ir_builder().GetInsertBlock());
 
   return value<value_type>{v, id};
 }
@@ -250,8 +249,7 @@ inline void return_() {
   mb.ir_builder().CreateRetVoid();
 }
 
-template<typename Value>
-inline void return_(Value v) {
+template<typename Value> inline void return_(Value v) {
   auto& mb = *module_builder::current_builder();
   mb.exited_block_ = true;
   auto line_no = mb.source_code_.add_line(fmt::format("return {};", v));

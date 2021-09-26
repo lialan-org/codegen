@@ -36,9 +36,9 @@ void memcpy(PointerValue auto dst, PointerValue auto src, Size auto n) {
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcpy({}, {}, {});", dst, src, n));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no, 1));
-  mb.ir_builder().CreateMemCpy(dst.eval(), llvm::MaybeAlign(detail::type<typename decltype(dst)::value_type>::alignment),
-                              src.eval(), llvm::MaybeAlign(detail::type<typename decltype(src)::value_type>::alignment),
-                              n.eval());
+  mb.ir_builder().CreateMemCpy(
+      dst.eval(), llvm::MaybeAlign(detail::type<typename decltype(dst)::value_type>::alignment), src.eval(),
+      llvm::MaybeAlign(detail::type<typename decltype(src)::value_type>::alignment), n.eval());
 }
 
 value<int> memcmp(Pointer auto src1, Pointer auto src2, Size auto n) {
@@ -47,8 +47,7 @@ value<int> memcmp(Pointer auto src1, Pointer auto src2, Size auto n) {
 
   auto fn_type = llvm::FunctionType::get(type<int>::llvm(),
                                          {type<void*>::llvm(), type<void*>::llvm(), type<size_t>::llvm()}, false);
-  auto fn =
-      llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, "memcmp", mb.module());
+  auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, "memcmp", mb.module());
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcmp_ret = memcmp({}, {}, {});", src1, src2, n));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no, 1));
@@ -57,8 +56,7 @@ value<int> memcmp(Pointer auto src1, Pointer auto src2, Size auto n) {
 
 namespace detail {
 
-template<typename Value>
-class bswap_impl {
+template<typename Value> class bswap_impl {
   Value value_;
 
 public:
@@ -68,7 +66,8 @@ public:
   explicit bswap_impl(Value v) : value_(v) {}
 
   llvm::Value* eval() {
-    return codegen::module_builder::current_builder()->ir_builder().CreateUnaryIntrinsic(llvm::Intrinsic::bswap, value_.eval());
+    return codegen::module_builder::current_builder()->ir_builder().CreateUnaryIntrinsic(llvm::Intrinsic::bswap,
+                                                                                         value_.eval());
   }
 
   friend std::ostream& operator<<(std::ostream& os, bswap_impl bi) { return os << "bswap(" << bi.value_ << ")"; }
@@ -76,8 +75,7 @@ public:
 
 } // namespace detail
 
-template<typename Value>
-auto bswap(Value v) {
+template<typename Value> auto bswap(Value v) {
   return detail::bswap_impl<Value>(v);
 }
 

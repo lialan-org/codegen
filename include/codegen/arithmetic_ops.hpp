@@ -40,8 +40,7 @@ enum class arithmetic_operation_type {
   xor_,
 };
 
-template<arithmetic_operation_type Op, LLVMTypeWrapper LHS, LLVMTypeWrapper RHS>
-class arithmetic_operation {
+template<arithmetic_operation_type Op, LLVMTypeWrapper LHS, LLVMTypeWrapper RHS> class arithmetic_operation {
   LHS lhs_;
   RHS rhs_;
 
@@ -55,9 +54,12 @@ public:
   llvm::Value* eval() const {
     if constexpr (std::is_integral_v<value_type>) {
       switch (Op) {
-      case arithmetic_operation_type::add: return codegen::module_builder::current_builder()->ir_builder().CreateAdd(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::sub: return codegen::module_builder::current_builder()->ir_builder().CreateSub(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::mul: return codegen::module_builder::current_builder()->ir_builder().CreateMul(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::add:
+        return codegen::module_builder::current_builder()->ir_builder().CreateAdd(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::sub:
+        return codegen::module_builder::current_builder()->ir_builder().CreateSub(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::mul:
+        return codegen::module_builder::current_builder()->ir_builder().CreateMul(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::div:
         if constexpr (std::is_signed_v<value_type>) {
           return codegen::module_builder::current_builder()->ir_builder().CreateSDiv(lhs_.eval(), rhs_.eval());
@@ -70,17 +72,25 @@ public:
         } else {
           return codegen::module_builder::current_builder()->ir_builder().CreateURem(lhs_.eval(), rhs_.eval());
         }
-      case arithmetic_operation_type::and_: return codegen::module_builder::current_builder()->ir_builder().CreateAnd(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::or_: return codegen::module_builder::current_builder()->ir_builder().CreateOr(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::xor_: return codegen::module_builder::current_builder()->ir_builder().CreateXor(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::and_:
+        return codegen::module_builder::current_builder()->ir_builder().CreateAnd(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::or_:
+        return codegen::module_builder::current_builder()->ir_builder().CreateOr(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::xor_:
+        return codegen::module_builder::current_builder()->ir_builder().CreateXor(lhs_.eval(), rhs_.eval());
       }
     } else {
       switch (Op) {
-      case arithmetic_operation_type::add: return codegen::module_builder::current_builder()->ir_builder().CreateFAdd(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::sub: return codegen::module_builder::current_builder()->ir_builder().CreateFSub(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::mul: return codegen::module_builder::current_builder()->ir_builder().CreateFMul(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::div: return codegen::module_builder::current_builder()->ir_builder().CreateFDiv(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::mod: return codegen::module_builder::current_builder()->ir_builder().CreateFRem(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::add:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFAdd(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::sub:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFSub(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::mul:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFMul(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::div:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFDiv(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::mod:
+        return codegen::module_builder::current_builder()->ir_builder().CreateFRem(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::and_: [[fallthrough]];
       case arithmetic_operation_type::or_: [[fallthrough]];
       case arithmetic_operation_type::xor_: abort();
@@ -110,8 +120,7 @@ enum class pointer_arithmetic_operation_type {
   sub,
 };
 
-template<pointer_arithmetic_operation_type Op, PointerValue LHS, IntegralValue RHS>
-class pointer_arithmetic_operation {
+template<pointer_arithmetic_operation_type Op, PointerValue LHS, IntegralValue RHS> class pointer_arithmetic_operation {
   LHS lhs_;
   RHS rhs_;
 
@@ -156,7 +165,6 @@ public:
 
 } // namespace detail
 
-
 template<ArithmeticValue LHS, ArithmeticValue RHS>
 auto operator+(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::add, LHS, RHS>(std::move(lhs), std::move(rhs));
@@ -190,8 +198,7 @@ auto operator&(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type,
 
 template<IntegralValue LHS, IntegralValue RHS>
 auto operator|(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::or_, LHS, RHS>(std::move(lhs),
-                                                                                        std::move(rhs));
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::or_, LHS, RHS>(std::move(lhs), std::move(rhs));
 }
 
 template<IntegralValue LHS, IntegralValue RHS>
@@ -200,16 +207,14 @@ auto operator^(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type,
                                                                                          std::move(rhs));
 }
 
-template<PointerValue LHS, IntegralValue RHS>
-auto operator+(LHS lhs, RHS rhs) {
-  return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::add, LHS, RHS>
-            (std::move(lhs), std::move(rhs));
+template<PointerValue LHS, IntegralValue RHS> auto operator+(LHS lhs, RHS rhs) {
+  return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::add, LHS, RHS>(std::move(lhs),
+                                                                                                        std::move(rhs));
 }
 
-template<PointerValue LHS, IntegralValue RHS>
-auto operator-(LHS lhs, RHS rhs) {
-  return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::sub, LHS, RHS>
-            (std::move(lhs), std::move(rhs));
+template<PointerValue LHS, IntegralValue RHS> auto operator-(LHS lhs, RHS rhs) {
+  return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::sub, LHS, RHS>(std::move(lhs),
+                                                                                                        std::move(rhs));
 }
 
 } // namespace codegen
