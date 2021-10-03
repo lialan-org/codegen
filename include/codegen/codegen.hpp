@@ -1,9 +1,11 @@
 #pragma once
 
 #if defined (__GNUC__)
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wredundant-move"
 #elif defined (__clang__)
-#pragma GCC diagnostic ignored "-Wredundant-move"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wredundant-move"
 #endif
 
 #include "arithmetic_ops.hpp"
