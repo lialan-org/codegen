@@ -120,6 +120,8 @@ public:
     template<typename ReturnType, typename... Arguments>
     llvm::DISubprogram* enter_function_scope(std::string const& function_name);
 
+    llvm::DISubprogram* jit_enter_function_scope(std::string const& function_name, llvm::FunctionType* func_type);
+
     void leave_function_scope() { dbg_scopes_.pop(); }
 
     unsigned current_line() const { return line_no_; }
@@ -186,6 +188,10 @@ public:
   llvm::Module& module() { return *module_; }
 
   llvm::Function*& current_function() { return function_; }
+
+  auto begin_creating_function(std::string const& name, llvm::FunctionType* func_type);
+  auto end_creating_function();
+
 
   [[nodiscard]] class module build() && {
     {
