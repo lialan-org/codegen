@@ -174,7 +174,7 @@ public:
   jit_module_builder(jit_module_builder&&) = delete;
   jit_module_builder& operator=(const jit_module_builder) = delete;
 
-  template<typename FunctionType> auto declare_external_function(std::string const& name, FunctionType* fn);
+  function_ref declare_external_function(std::string const& name, llvm::FunctionType* fn);
 
   void dump_llvm_ir(llvm::raw_ostream& out) const { module_->print(out, nullptr); }
 

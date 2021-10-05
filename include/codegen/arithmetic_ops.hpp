@@ -33,8 +33,10 @@ enum class arithmetic_operation_type {
   add,
   sub,
   mul,
-  div,
-  mod,
+  sdiv,
+  udiv,
+  smod,
+  umod,
   and_,
   or_,
   xor_,
@@ -44,74 +46,70 @@ template<arithmetic_operation_type Op> class arithmetic_operation : public codeg
   value lhs_;
   value rhs_;
 
-
 public:
-  using value_type = typename LHS::value_type;
-
   arithmetic_operation(value lhs, value rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
-    assert(lhs_.getType() == rhs_.getType());
+    assert(lhs_.get_type() == rhs_.get_type());
   }
 
-  value operator() && { return eval(); }
-
   llvm::Value* eval() const {
-    if constexpr (std::is_integral_v<value_type>) {
+    if constexpr (lhs_.isIntegerType()) {
       switch (Op) {
       case arithmetic_operation_type::add:
-        return codegen::module_builder::current_builder()->ir_builder().CreateAdd(lhs_.eval(), rhs_.eval());
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateAdd(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::sub:
-        return codegen::module_builder::current_builder()->ir_builder().CreateSub(lhs_.eval(), rhs_.eval());
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateSub(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::mul:
-        return codegen::module_builder::current_builder()->ir_builder().CreateMul(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::div:
-        if constexpr (std::is_signed_v<value_type>) {
-          return codegen::module_builder::current_builder()->ir_builder().CreateSDiv(lhs_.eval(), rhs_.eval());
-        } else {
-          return codegen::module_builder::current_builder()->ir_builder().CreateUDiv(lhs_.eval(), rhs_.eval());
-        }
-      case arithmetic_operation_type::mod:
-        if constexpr (std::is_signed_v<value_type>) {
-          return codegen::module_builder::current_builder()->ir_builder().CreateSRem(lhs_.eval(), rhs_.eval());
-        } else {
-          return codegen::module_builder::current_builder()->ir_builder().CreateURem(lhs_.eval(), rhs_.eval());
-        }
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateMul(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::sdiv:
+          return codegen::jit_module_builder::current_builder()->ir_builder().CreateSDiv(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::udiv:
+          return codegen::jit_module_builder::current_builder()->ir_builder().CreateUDiv(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::smod:
+          return codegen::jit_module_builder::current_builder()->ir_builder().CreateSRem(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::umod:
+          return codegen::jit_module_builder::current_builder()->ir_builder().CreateURem(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::and_:
-        return codegen::module_builder::current_builder()->ir_builder().CreateAnd(lhs_.eval(), rhs_.eval());
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateAnd(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::or_:
-        return codegen::module_builder::current_builder()->ir_builder().CreateOr(lhs_.eval(), rhs_.eval());
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateOr(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::xor_:
-        return codegen::module_builder::current_builder()->ir_builder().CreateXor(lhs_.eval(), rhs_.eval());
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateXor(lhs_.eval(), rhs_.eval());
       }
-    } else {
+    } else if (lhs_.isFloatType()) {
       switch (Op) {
       case arithmetic_operation_type::add:
-        return codegen::module_builder::current_builder()->ir_builder().CreateFAdd(lhs_.eval(), rhs_.eval());
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateFAdd(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::sub:
-        return codegen::module_builder::current_builder()->ir_builder().CreateFSub(lhs_.eval(), rhs_.eval());
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateFSub(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::mul:
-        return codegen::module_builder::current_builder()->ir_builder().CreateFMul(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::div:
-        return codegen::module_builder::current_builder()->ir_builder().CreateFDiv(lhs_.eval(), rhs_.eval());
-      case arithmetic_operation_type::mod:
-        return codegen::module_builder::current_builder()->ir_builder().CreateFRem(lhs_.eval(), rhs_.eval());
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateFMul(lhs_.eval(), rhs_.eval());
+      // TODO: floating point specific div/mod
+      case arithmetic_operation_type::sdiv:
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateFDiv(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::smod:
+        return codegen::jit_module_builder::current_builder()->ir_builder().CreateFRem(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::and_: [[fallthrough]];
       case arithmetic_operation_type::or_: [[fallthrough]];
       case arithmetic_operation_type::xor_: abort();
       }
+    } else {
+      llvm_unreachable("unimplemented");
     }
   }
 
   friend std::ostream& operator<<(std::ostream& os, arithmetic_operation const& ao) {
     auto symbol = [] {
       switch (Op) {
-      case arithmetic_operation_type::add: return '+';
-      case arithmetic_operation_type::sub: return '-';
-      case arithmetic_operation_type::mul: return '*';
-      case arithmetic_operation_type::div: return '/';
-      case arithmetic_operation_type::mod: return '%';
-      case arithmetic_operation_type::and_: return '&';
-      case arithmetic_operation_type::or_: return '|';
-      case arithmetic_operation_type::xor_: return '^';
+      case arithmetic_operation_type::add: return "+";
+      case arithmetic_operation_type::sub: return "-";
+      case arithmetic_operation_type::mul: return "*";
+      case arithmetic_operation_type::sdiv: return "s/";
+      case arithmetic_operation_type::udiv: return "s/";
+      case arithmetic_operation_type::smod: return "u%";
+      case arithmetic_operation_type::umod: return "u%";
+      case arithmetic_operation_type::and_: return "&";
+      case arithmetic_operation_type::or_: return "|";
+      case arithmetic_operation_type::xor_: return "^";
       }
     }();
     return os << '(' << ao.lhs_ << ' ' << symbol << ' ' << ao.rhs_ << ')';
@@ -124,20 +122,21 @@ enum class pointer_arithmetic_operation_type {
 };
 
 template<pointer_arithmetic_operation_type Op> class pointer_arithmetic_operation {
-  LHS lhs_;
-  RHS rhs_;
+  value lhs_;
+  value rhs_;
 
 public:
-  pointer_arithmetic_operation(LHS lhs, RHS rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
-    assert(lhs_.getType().isPointerTy());
-    assert(rhs_.getType().isFirstClassType());
+  pointer_arithmetic_operation(value lhs, value rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
+    assert(lhs_.isPointerType());
+    // TODO: more types
+    assert(rhs_.isIntegerType() || rhs_.isPointerType() || rhs_.isFloatType());
   }
 
   llvm::Value* eval() const {
-    auto& mb = *codegen::module_builder::current_builder();
-    auto rhs = rhs_.eval();
     llvm_unreachable("unimplemented");
     /*
+    //auto& mb = *codegen::jit_module_builder::current_builder();
+    //auto rhs = rhs_.eval();
     if constexpr (sizeof(rhs_value_type) < sizeof(uint64_t)) {
       if constexpr (std::is_unsigned_v<rhs_value_type>) {
         rhs = mb.ir_builder().CreateZExt(rhs, type<uint64_t>::llvm());
@@ -167,8 +166,10 @@ public:
 
 } // namespace detail
 
-value operator+(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::add>(std::move(lhs), std::move(rhs))();
+// TODO: add unsigned operations.
+
+auto operator+(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::add>(std::move(lhs), std::move(rhs));
 }
 
 auto operator-(value lhs, value rhs) {
@@ -180,11 +181,11 @@ auto operator*(value lhs, value rhs) {
 }
 
 auto operator/(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::div>(std::move(lhs), std::move(rhs));
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::sdiv>(std::move(lhs), std::move(rhs));
 }
 
 auto operator%(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::mod>(std::move(lhs), std::move(rhs));
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::umod>(std::move(lhs), std::move(rhs));
 }
 
 auto operator&(value lhs, value rhs) {

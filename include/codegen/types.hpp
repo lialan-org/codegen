@@ -45,6 +45,12 @@ public:
     return get_type()->isFloatTy();
   }
 
+  // TODO: LLVM IR does not distinguish sign or unsigned values. so we need to carry
+  // extra info.
+  /*
+  bool isSignedIntegerType() const { }
+  */
+
   bool getPointerElementType() const {
     assert(isPointerType());
     llvm::PointerType * ptr_type = llvm::dyn_cast<llvm::PointerType>(get_type());
@@ -56,15 +62,15 @@ public:
 
 namespace codegen::detail {
 
-inline llvm::Value* get_constant(LLVMPODType auto v) {
-  using Type = decltype(v);
-  if constexpr (LLVMIntegralType<Type>) {
-    return llvm::ConstantInt::get(codegen::module_builder::current_builder()->context(),
+template<typename Type>
+inline llvm::Value* get_constant(Type v) {
+  if constexpr (std::is_same_v<Type, bool>) {
+    return llvm::ConstantInt::get(codegen::jit_module_builder::current_builder()->context(), llvm::APInt(1, v, true));
+  } else if constexpr (std::is_integral_v<Type>) {
+    return llvm::ConstantInt::get(codegen::jit_module_builder::current_builder()->context(),
                                   llvm::APInt(sizeof(Type) * 8, v, std::is_signed_v<Type>));
-  } else if constexpr (LLVMFloatingType<Type>) {
-    return llvm::ConstantFP::get(codegen::module_builder::current_builder()->context(), llvm::APFloat(v));
-  } else if constexpr (LLVMBoolType<Type>) {
-    return llvm::ConstantInt::get(codegen::module_builder::current_builder()->context(), llvm::APInt(1, v, true));
+  } else if constexpr (std::is_floating_point_v<Type>) {
+    return llvm::ConstantFP::get(codegen::jit_module_builder::current_builder()->context(), llvm::APFloat(v));
   } else {
     llvm_unreachable("Unsupported type");
   }
@@ -148,9 +154,10 @@ public:
 
 namespace codegen {
 
+template<typename Type>
 inline value constant(Type v) {
   return value{detail::get_constant<Type>(v), [&] {
-                       if constexpr (std::same_as<Type, bool>) {
+                       if constexpr (std::is_same_v<Type, bool>) {
                          return v ? "true" : "false";
                        } else {
                          return std::to_string(v);
@@ -158,27 +165,24 @@ inline value constant(Type v) {
                      }()};
 }
 
-auto module_builder::begin_creating_function(std::string const& name, llvm::FunctionType* func_type) {
+auto jit_module_builder::begin_creating_function(std::string const& name, llvm::FunctionType* func_type) {
 
 }
 
-auto module_builder::end_creating_function() {
+auto jit_module_builder::end_creating_function() {
 
 }
 
-template<typename FunctionType>
-auto module_builder::declare_external_function(std::string const& name, FunctionType* fn) {
-  assert(module_builder::current_builder() == this || !module_builder::current_builder());
+function_ref jit_module_builder::declare_external_function(std::string const& name, llvm::FunctionType* fn) {
+  assert(jit_module_builder::current_builder() == this || !jit_module_builder::current_builder());
 
-  auto fn_ref = detail::function_declaration_builder<FunctionType>{}(name);
-
+  auto fn_ref = detail::function_declaration_builder{}(name, fn);
   declare_external_symbol(name, reinterpret_cast<void*>(fn));
-
   return fn_ref;
 }
 
 llvm::DISubprogram*
-module_builder::source_code_generator::jit_enter_function_scope(std::string const& function_name, llvm::FunctionType* func_type) {
+jit_module_builder::source_code_generator::jit_enter_function_scope(std::string const& function_name, llvm::FunctionType* func_type) {
   auto params = func_type->params();
   llvm::SmallVector<llvm::Metadata*> dbg_types(params.size() + 1);
 

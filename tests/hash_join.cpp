@@ -1,5 +1,6 @@
 #include "codegen/codegen.hpp"
 
+/*
 int32_t table1[][2] = {{0, 1}, {2, 3}, {4, 5}};
 int32_t table2[][2] = {{2, 9}, {8, 7}, {6, 5}};
 
@@ -109,3 +110,5 @@ int main(int argc, char* argv[]) {
   auto probe_ptr = module.get_address(probe_phase);
   probe_ptr((int32_t*)table2, 3);
 }
+
+*/

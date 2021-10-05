@@ -75,7 +75,6 @@ class variable : public value {
   llvm::Instruction* variable_;
   std::string name_;
 
-  template<typename T>
   explicit variable(std::string const& n, llvm::Type *llvm_type) : name_(n) {
     auto& mb = *jit_module_builder::current_builder();
     auto& context = mb.context();
@@ -95,6 +94,7 @@ class variable : public value {
 public:
   template<int size>
   static variable variable_integer(std::string const &n) {
+    auto& mb = *jit_module_builder::current_builder();
     auto& context = mb.context();
     auto llvm_type = llvm::IntegerType::get(context, size);
     return variable(n, llvm_type);
@@ -109,6 +109,7 @@ public:
   }
 
   static variable variable_float(std::string const &n) {
+    auto& mb = *jit_module_builder::current_builder();
     auto& context = mb.context();
     llvm::Type *llvm_type = llvm::Type::getFloatTy(context);
     return variable(n, llvm_type);

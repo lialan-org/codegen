@@ -40,7 +40,7 @@ public:
 
   template<typename ReturnType, typename... Arguments>
   auto get_address(std::string const &name) {
-    auto entry_pointer = cantFail(lljit_->lookup(fn.name()));
+    auto entry_pointer = cantFail(lljit_->lookup(name));
     return llvm::jitTargetAddressToFunction<ReturnType (*)(Arguments...)>(entry_pointer.getAddress());
   }
 };
