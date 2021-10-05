@@ -30,15 +30,15 @@ namespace codegen::builtin {
 
 using namespace codegen;
 
-void memcpy(PointerValue auto dst, PointerValue auto src, Size auto n) {
+void memcpy(value dst, value src, value n) {
   using namespace detail;
-  auto& mb = *module_builder::current_builder();
+  auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcpy({}, {}, {});", dst, src, n));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no, 1));
   mb.ir_builder().CreateMemCpy(
-      dst.eval(), llvm::MaybeAlign(detail::type<typename decltype(dst)::value_type>::alignment), src.eval(),
-      llvm::MaybeAlign(detail::type<typename decltype(src)::value_type>::alignment), n.eval());
+      dst.eval(), llvm::MaybeAlign(), src.eval(),
+      llvm::MaybeAlign(), n.eval());
 }
 
 value<int> memcmp(Pointer auto src1, Pointer auto src2, Size auto n) {

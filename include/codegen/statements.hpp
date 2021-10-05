@@ -28,8 +28,9 @@
 
 namespace codegen {
 
-template<typename TrueBlock, typename FalseBlock>
-inline void if_(value&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
+template<typename TrueBlockLambda, typename FalseBlockLambda>
+inline void if_(value&& cnd, TrueBlockLambda&& tb, FalseBlockLambda&& fb) {
+  assert(cnd.get_type() == detail::runtime_type::BoolTy);
   auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
@@ -75,8 +76,9 @@ inline void if_(value&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   mb.ir_builder().SetInsertPoint(merge_block);
 }
 
-template<typename TrueBlock>
-inline void if_(value&& cnd, TrueBlock&& tb) {
+template<typename TrueBlockLambda>
+inline void if_(value&& cnd, TrueBlockLambda&& tb) {
+  assert(cnd.get_type() == detail::runtime_type::BoolTy);
   auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
@@ -128,7 +130,8 @@ inline value call(function_ref const& fn, value&... args) {
 }
 
 inline auto load(value ptr) {
-  // assert(ptr.isPointerTy());
+  auto elem_type = ptr.getPointerElementType();
+
   auto& mb = *jit_module_builder::current_builder();
 
   auto id = fmt::format("val{}", detail::id_counter++);
@@ -138,31 +141,25 @@ inline auto load(value ptr) {
   auto v = mb.ir_builder().CreateAlignedLoad(ptr.eval(), llvm::MaybeAlign());
 
   auto dbg_value = mb.debug_builder().createAutoVariable(
-      mb.source_code_.debug_scope(), id, mb.source_code_.debug_file(), line_no, reverse_type_lookup::dbg(ptr.getType()));
+      mb.source_code_.debug_scope(), id, mb.source_code_.debug_file(), line_no, detail::reverse_type_lookup::dbg(elem_type));
   mb.debug_builder().insertDbgValueIntrinsic(v, dbg_value, mb.debug_builder().createExpression(),
                                              mb.get_debug_location(line_no), mb.ir_builder().GetInsertBlock());
   return value{v, id};
 }
 
-template<
-    typename Value, typename Pointer,
-    typename = std::enable_if_t<std::is_pointer_v<typename std::decay_t<Pointer>::value_type> &&
-                                !std::is_const_v<std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>> &&
-                                std::is_same_v<typename std::decay_t<Value>::value_type,
-                                               std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>>>>
-inline void store(Value v, Pointer ptr) {
-  using value_type = std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>;
-  auto& mb = *module_builder::current_builder();
+inline void store(value v, value ptr) {
+  assert(ptr.isPointerType());
+  // TODO: check element type the same
+  auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("*{} = {}", ptr, v));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
-  mb.ir_builder().CreateAlignedStore(v.eval(), ptr.eval(), llvm::MaybeAlign(detail::type<value_type>::alignment));
+  mb.ir_builder().CreateAlignedStore(v.eval(), ptr.eval(), llvm::MaybeAlign());
 }
 
-template<typename ConditionFn, typename Body,
-         typename = std::enable_if_t<std::is_same_v<typename std::invoke_result_t<ConditionFn>::value_type, bool>>>
-inline void while_(ConditionFn cnd_fn, Body bdy) {
-  auto& mb = *module_builder::current_builder();
+template<typename BodyLambda>
+inline void while_(value cnd_fn, BodyLambda && bdy) {
+  auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.current_line() + 1;
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
@@ -173,7 +170,7 @@ inline void while_(ConditionFn cnd_fn, Body bdy) {
   auto while_iteration = llvm::BasicBlock::Create(mb.context(), "while_iteration");
   auto while_break = llvm::BasicBlock::Create(mb.context(), "while_break");
 
-  auto parent_loop = std::exchange(mb.current_loop_, module_builder::loop{while_continue, while_break});
+  auto parent_loop = std::exchange(mb.current_loop_, jit_module_builder::loop{while_continue, while_break});
 
   mb.ir_builder().CreateBr(while_continue);
   mb.ir_builder().SetInsertPoint(while_continue);
@@ -205,7 +202,7 @@ inline void while_(ConditionFn cnd_fn, Body bdy) {
 }
 
 inline void break_() {
-  auto& mb = *module_builder::current_builder();
+  auto& mb = *jit_module_builder::current_builder();
   assert(mb.current_loop_.break_block_);
 
   mb.exited_block_ = true;
@@ -217,7 +214,7 @@ inline void break_() {
 }
 
 inline void continue_() {
-  auto& mb = *module_builder::current_builder();
+  auto& mb = *jit_module_builder::current_builder();
   assert(mb.current_loop_.continue_block_);
 
   mb.exited_block_ = true;
@@ -228,24 +225,24 @@ inline void continue_() {
   mb.ir_builder().CreateBr(mb.current_loop_.continue_block_);
 }
 
-inline value<bool> true_() {
+inline value true_() {
   return constant(true);
 }
 
-inline value<bool> false_() {
+inline value false_() {
   return constant(false);
 }
 
 inline void return_() {
-  auto& mb = *module_builder::current_builder();
+  auto& mb = *jit_module_builder::current_builder();
   auto line_no = mb.source_code_.add_line("return;");
   mb.exited_block_ = true;
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
   mb.ir_builder().CreateRetVoid();
 }
 
-template<typename Value> inline void return_(Value v) {
-  auto& mb = *module_builder::current_builder();
+inline void return_(value v) {
+  auto& mb = *jit_module_builder::current_builder();
   mb.exited_block_ = true;
   auto line_no = mb.source_code_.add_line(fmt::format("return {};", v));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));

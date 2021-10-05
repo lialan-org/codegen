@@ -71,34 +71,14 @@ struct type_reverse_lookup {
   }
 };
 
-class variable {
+class variable : public value {
   llvm::Instruction* variable_;
   std::string name_;
 
-  detail::variable_type type_;
-  uint64_t bitwidth_;
-
-  explicit variable(std::string const& n, detail::variable_type type, size_t bitwidth = 0) : name_(n) {
+  template<typename T>
+  explicit variable(std::string const& n, llvm::Type *llvm_type) : name_(n) {
     auto& mb = *jit_module_builder::current_builder();
     auto& context = mb.context();
-
-    llvm::Type * llvm_type = nullptr;
-    switch (type) {
-      using detail::variable_type;
-      case variable_type::BoolTy:
-        llvm_type = llvm::IntegerType::get(context, 1);
-        break;
-      case variable_type::IntTy:
-        assert(bitwidth != 0 && "integer type cannot have zero bitwidth");
-        llvm_type = llvm::IntegerType::get(context, bitwidth);
-        break;
-      case variable_type::FloatTy:
-        llvm_type = llvm::Type::getFloatTy(context);
-        break;
-      default:
-        llvm_unreachable("unimplemented");
-    }
-    assert(llvm_type);
 
     auto alloca_builder =
         llvm::IRBuilder<>(&mb.current_function()->getEntryBlock(), mb.current_function()->getEntryBlock().begin());
@@ -115,7 +95,9 @@ class variable {
 public:
   template<int size>
   static variable variable_integer(std::string const &n) {
-    return variable(n, variable_type::IntTy, size);
+    auto& context = mb.context();
+    auto llvm_type = llvm::IntegerType::get(context, size);
+    return variable(n, llvm_type);
   }
 
   static variable variable_bool(std::string const& n) {
@@ -127,7 +109,9 @@ public:
   }
 
   static variable variable_float(std::string const &n) {
-    return variable(n, variable_type::FloatTy, sizeof(float));
+    auto& context = mb.context();
+    llvm::Type *llvm_type = llvm::Type::getFloatTy(context);
+    return variable(n, llvm_type);
   }
 
   // TODO: array, struct, double, string, byte types.

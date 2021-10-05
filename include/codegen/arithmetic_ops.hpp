@@ -40,7 +40,7 @@ enum class arithmetic_operation_type {
   xor_,
 };
 
-template<arithmetic_operation_type Op> class arithmetic_operation {
+template<arithmetic_operation_type Op> class arithmetic_operation : public codegen::value {
   value lhs_;
   value rhs_;
 
@@ -51,6 +51,8 @@ public:
   arithmetic_operation(value lhs, value rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
     assert(lhs_.getType() == rhs_.getType());
   }
+
+  value operator() && { return eval(); }
 
   llvm::Value* eval() const {
     if constexpr (std::is_integral_v<value_type>) {
@@ -165,8 +167,8 @@ public:
 
 } // namespace detail
 
-auto operator+(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::add>(std::move(lhs), std::move(rhs));
+value operator+(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::add>(std::move(lhs), std::move(rhs))();
 }
 
 auto operator-(value lhs, value rhs) {

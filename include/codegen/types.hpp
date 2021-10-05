@@ -13,21 +13,43 @@ namespace codegen {
 class value {
   llvm::Value* value_;
   std::string name_;
-  detail::runtime_type type_;
 
 public:
-  explicit value(llvm::Value* v, std::string const& n, detail::runtime_type type)
-    : value_(v), name_(n), type_(type) {}
+  explicit value(llvm::Value* v, std::string const& n)
+    : value_(v), name_(n) {}
 
   value(value const&) = default;
   value(value&&) = default;
   void operator=(value const&) = delete;
   void operator=(value&&) = delete;
 
-  detail::runtime_type get_type() const { return type_; }
-  operator llvm::Value *() const noexcept { return value_; }
-  llvm::Value* eval() const { return value_; }
-  friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
+  virtual operator llvm::Value *() const noexcept { return value_; }
+
+  virtual llvm::Type* get_type() const { return value_->getType(); }
+
+  virtual llvm::Value* eval() const { return value_; }
+  virtual std::string get_name() const { return name_; }
+
+  friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.get_name(); }
+
+  bool isPointerType() const {
+    return get_type()->isPointerTy();
+  }
+  bool isIntegerType() const {
+    return get_type()->isIntegerTy();
+  }
+  bool isBoolType() const {
+    return get_type()->isIntegerTy(1);
+  }
+  bool isFloatType() const {
+    return get_type()->isFloatTy();
+  }
+
+  bool getPointerElementType() const {
+    assert(isPointerType());
+    llvm::PointerType * ptr_type = llvm::dyn_cast<llvm::PointerType>(get_type());
+    return ptr_type->getElementType();
+  }
 };
 
 } // namespace codegen
@@ -122,100 +144,18 @@ public:
   }
 };
 
-template<typename FromValue, typename ToType> class bit_cast_impl {
-  FromValue from_value_;
-
-  using from_type = typename FromValue::value_type;
-
-public:
-  static_assert(sizeof(from_type) == sizeof(ToType));
-  static_assert(std::is_pointer_v<from_type> == std::is_pointer_v<ToType>);
-
-  using value_type = ToType;
-
-  bit_cast_impl(FromValue fv) : from_value_(fv) {}
-
-  llvm::Value* eval() {
-    return module_builder::current_builder()->ir_builder().CreateBitCast(from_value_.eval(), type<ToType>::llvm());
-  }
-
-  friend std::ostream& operator<<(std::ostream& os, bit_cast_impl bci) {
-    return os << "bit_cast<" << type<ToType>::name() << ">(" << bci.from_value_ << ")";
-  }
-};
-
-template<typename FromValue, typename ToType> class cast_impl {
-  FromValue from_value_;
-
-  using from_type = typename FromValue::value_type;
-  using to_type = ToType;
-
-public:
-  static_assert(!std::is_pointer_v<from_type> && !std::is_pointer_v<ToType>);
-
-  using value_type = ToType;
-
-  cast_impl(FromValue fv) : from_value_(fv) {}
-
-  llvm::Value* eval() {
-    auto& mb = *codegen::module_builder::current_builder();
-    if constexpr (std::is_floating_point_v<from_type> && std::is_floating_point_v<to_type>) {
-      return mb.ir_builder().CreateFPCast(from_value_.eval(), type<to_type>::llvm());
-    } else if constexpr (std::is_floating_point_v<from_type> && std::is_integral_v<to_type>) {
-      if constexpr (std::is_signed_v<to_type>) {
-        return mb.ir_builder().CreateFPToSI(from_value_.eval(), type<to_type>::llvm());
-      } else {
-        return mb.ir_builder().CreateFPToUI(from_value_.eval(), type<to_type>::llvm());
-      }
-    } else if constexpr (std::is_integral_v<from_type> && std::is_floating_point_v<to_type>) {
-      if constexpr (std::is_signed_v<from_type>) {
-        return mb.ir_builder().CreateSIToFP(from_value_.eval(), type<to_type>::llvm());
-      } else {
-        return mb.ir_builder().CreateUIToFP(from_value_.eval(), type<to_type>::llvm());
-      }
-    } else if constexpr (std::is_integral_v<from_type> && std::is_integral_v<to_type>) {
-      if constexpr (std::is_signed_v<from_type>) {
-        return mb.ir_builder().CreateSExtOrTrunc(from_value_.eval(), type<to_type>::llvm());
-      } else {
-        return mb.ir_builder().CreateZExtOrTrunc(from_value_.eval(), type<to_type>::llvm());
-      }
-    }
-  }
-
-  friend std::ostream& operator<<(std::ostream& os, cast_impl ci) {
-    return os << "cast<" << type<ToType>::name() << ">(" << ci.from_value_ << ")";
-  }
-};
-
 } // namespace codegen::detail
 
 namespace codegen {
 
-template<LLVMArithmeticType Type> inline value<Type> constant(Type v) {
-  return value<Type>{detail::get_constant<Type>(v), [&] {
+inline value constant(Type v) {
+  return value{detail::get_constant<Type>(v), [&] {
                        if constexpr (std::same_as<Type, bool>) {
                          return v ? "true" : "false";
                        } else {
                          return std::to_string(v);
                        }
                      }()};
-}
-
-template<typename ToType, typename FromValue> inline auto bit_cast(FromValue v) {
-  return detail::bit_cast_impl<FromValue, ToType>(v);
-}
-
-template<typename ToType, typename FromValue> inline auto cast(FromValue v) {
-  return detail::cast_impl<FromValue, ToType>(v);
-}
-
-template<typename FunctionType, typename FunctionBuilder>
-auto module_builder::create_function(std::string const& name, FunctionBuilder&& fb) {
-  assert(module_builder::current_builder() == this || !module_builder::current_builder());
-  exited_block_ = false;
-  auto fn_ref = detail::function_builder<FunctionType>{}(name, fb);
-  fn_ref.set_function_attribute({"target-cpu", llvm::sys::getHostCPUName()});
-  return fn_ref;
 }
 
 auto module_builder::begin_creating_function(std::string const& name, llvm::FunctionType* func_type) {
@@ -257,7 +197,5 @@ module_builder::source_code_generator::jit_enter_function_scope(std::string cons
   dbg_scopes_.push(dbg_fn_scope);
   return dbg_fn_scope;
 }
-
-
 
 } // namespace codegen
