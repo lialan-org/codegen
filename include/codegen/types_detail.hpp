@@ -35,16 +35,16 @@ struct type_reverse_lookup {
       return nullptr;      
     } else if (type->isIntegerTy(1)) {
       // bool type
-      return codegen::module_builder::current_builder()->debug_builder().createBasicType(ty_name, 8,
+      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 8,
                                                                                          llvm::dwarf::DW_ATE_boolean);
     } else if (type->isIntegerTy()) {
       assert(!type->isIntegerTy(1));
       // TODO: implement unsigned
-      return codegen::module_builder::current_builder()->debug_builder().createBasicType(
+      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(
         ty_name, type->getIntegerBitWidth(), llvm::dwarf::DW_ATE_signed);
 
     } else if (type->isFloatTy()) {
-      return codegen::module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
+      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
                                                                                          llvm::dwarf::DW_ATE_float);
     } else {
       llvm_unreachable("unimplemented");

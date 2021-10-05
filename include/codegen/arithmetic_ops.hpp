@@ -40,16 +40,17 @@ enum class arithmetic_operation_type {
   xor_,
 };
 
-template<arithmetic_operation_type Op, LLVMTypeWrapper LHS, LLVMTypeWrapper RHS> class arithmetic_operation {
-  LHS lhs_;
-  RHS rhs_;
+template<arithmetic_operation_type Op> class arithmetic_operation {
+  value lhs_;
+  value rhs_;
 
-  static_assert(std::is_same_v<typename LHS::value_type, typename RHS::value_type>);
 
 public:
   using value_type = typename LHS::value_type;
 
-  arithmetic_operation(LHS lhs, RHS rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
+  arithmetic_operation(value lhs, value rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
+    assert(lhs_.getType() == rhs_.getType());
+  }
 
   llvm::Value* eval() const {
     if constexpr (std::is_integral_v<value_type>) {
@@ -120,23 +121,21 @@ enum class pointer_arithmetic_operation_type {
   sub,
 };
 
-template<pointer_arithmetic_operation_type Op, PointerValue LHS, IntegralValue RHS> class pointer_arithmetic_operation {
+template<pointer_arithmetic_operation_type Op> class pointer_arithmetic_operation {
   LHS lhs_;
   RHS rhs_;
 
-  static_assert(std::is_pointer_v<typename LHS::value_type>);
-  static_assert(std::is_integral_v<typename RHS::value_type>);
-
-  using rhs_value_type = typename RHS::value_type;
-
 public:
-  using value_type = typename LHS::value_type;
-
-  pointer_arithmetic_operation(LHS lhs, RHS rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
+  pointer_arithmetic_operation(LHS lhs, RHS rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
+    assert(lhs_.getType().isPointerTy());
+    assert(rhs_.getType().isFirstClassType());
+  }
 
   llvm::Value* eval() const {
     auto& mb = *codegen::module_builder::current_builder();
     auto rhs = rhs_.eval();
+    llvm_unreachable("unimplemented");
+    /*
     if constexpr (sizeof(rhs_value_type) < sizeof(uint64_t)) {
       if constexpr (std::is_unsigned_v<rhs_value_type>) {
         rhs = mb.ir_builder().CreateZExt(rhs, type<uint64_t>::llvm());
@@ -150,6 +149,7 @@ public:
       return mb.ir_builder().CreateInBoundsGEP(lhs_.eval(), mb.ir_builder().CreateSub(constant<int64_t>(0), rhs));
     }
     abort();
+    */
   }
 
   friend std::ostream& operator<<(std::ostream& os, pointer_arithmetic_operation const& ao) {
@@ -165,48 +165,39 @@ public:
 
 } // namespace detail
 
-template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator+(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::add, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator+(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::add>(std::move(lhs), std::move(rhs));
 }
 
-template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator-(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::sub, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator-(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::sub>(std::move(lhs), std::move(rhs));
 }
 
-template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator*(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::mul, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator*(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::mul>(std::move(lhs), std::move(rhs));
 }
 
-template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator/(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::div, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator/(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::div>(std::move(lhs), std::move(rhs));
 }
 
-template<ArithmeticValue LHS, ArithmeticValue RHS>
-auto operator%(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::mod, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator%(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::mod>(std::move(lhs), std::move(rhs));
 }
 
-template<IntegralValue LHS, IntegralValue RHS>
-auto operator&(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::and_, LHS, RHS>(std::move(lhs),
-                                                                                         std::move(rhs));
+auto operator&(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::and_>(std::move(lhs), std::move(rhs));
 }
 
-template<IntegralValue LHS, IntegralValue RHS>
-auto operator|(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::or_, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator|(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::or_>(std::move(lhs), std::move(rhs));
 }
 
-template<IntegralValue LHS, IntegralValue RHS>
-auto operator^(LHS lhs, RHS rhs) requires std::same_as<typename LHS::value_type, typename RHS::value_type> {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::xor_, LHS, RHS>(std::move(lhs),
-                                                                                         std::move(rhs));
+auto operator^(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::xor_>(std::move(lhs), std::move(rhs));
 }
 
+/*
 template<PointerValue LHS, IntegralValue RHS> auto operator+(LHS lhs, RHS rhs) {
   return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::add, LHS, RHS>(std::move(lhs),
                                                                                                         std::move(rhs));
@@ -216,5 +207,6 @@ template<PointerValue LHS, IntegralValue RHS> auto operator-(LHS lhs, RHS rhs) {
   return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::sub, LHS, RHS>(std::move(lhs),
                                                                                                         std::move(rhs));
 }
+*/
 
 } // namespace codegen
