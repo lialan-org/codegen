@@ -33,7 +33,6 @@ namespace codegen {
 // 2. do codegen incrementally
 // 3. need to store intemediary results.
 
-namespace jit {
 
 struct type_reverse_lookup {
   static std::string name(llvm::Type *type) {
@@ -57,16 +56,16 @@ struct type_reverse_lookup {
       return nullptr;      
     } else if (type->isIntegerTy(1)) {
       // bool type
-      return codegen::module_builder::current_builder()->debug_builder().createBasicType(ty_name, 8,
+      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 8,
                                                                                          llvm::dwarf::DW_ATE_boolean);
     } else if (type->isIntegerTy()) {
       assert(!type->isIntegerTy(1));
       // TODO: implement unsigned
-      return codegen::module_builder::current_builder()->debug_builder().createBasicType(
+      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(
         ty_name, type->getIntegerBitWidth(), llvm::dwarf::DW_ATE_signed);
 
     } else if (type->isFloatTy()) {
-      return codegen::module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
+      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
                                                                                          llvm::dwarf::DW_ATE_float);
     } else {
       llvm_unreachable("unimplemented");
@@ -79,7 +78,7 @@ class variable {
   std::string name_;
 
   explicit variable(std::string const& n, llvm::Type* type) : name_(n) {
-    auto& mb = *module_builder::current_builder();
+    auto& mb = *jit_module_builder::current_builder();
 
     auto alloca_builder =
         llvm::IRBuilder<>(&mb.current_function()->getEntryBlock(), mb.current_function()->getEntryBlock().begin());
@@ -109,108 +108,11 @@ public:
   }
 
   static variable variable_float(std::string const &n) {
-    auto& context = module_builder::current_builder()->context();
+    auto& context = jit_module_builder::current_builder()->context();
     return variable(n, llvm::Type::getFloatTy(context));
   }
 
   // TODO: array, struct, double, string, byte types.
 }; // class variable
-
-} // namespace jit
-
-
-template<typename T> concept Variable = !std::is_const_v<T> && !std::is_volatile_v<T>;
-
-template<Variable Type> class variable {
-  llvm::Instruction* variable_;
-  std::string name_;
-
-public:
-  explicit variable(std::string const& n) : name_(n) {
-    auto& mb = *module_builder::current_builder();
-
-    auto alloca_builder =
-        llvm::IRBuilder<>(&mb.current_function()->getEntryBlock(), mb.current_function()->getEntryBlock().begin());
-    variable_ = alloca_builder.CreateAlloca(detail::type<Type>::llvm(), nullptr, name_);
-
-    auto line_no = mb.source_code_.add_line(fmt::format("{} {};", detail::type<Type>::name(), name_));
-    auto& debug_builder = mb.debug_builder();
-    auto dbg_variable = debug_builder.createAutoVariable(
-        mb.source_code_.debug_scope(), name_, mb.source_code_.debug_file(), line_no, detail::type<Type>::dbg());
-    debug_builder.insertDeclare(variable_, dbg_variable, debug_builder.createExpression(),
-                                mb.get_debug_location(line_no), mb.ir_builder().GetInsertBlock());
-  }
-
-  template<typename Value> explicit variable(std::string const& n, Value const& v) : variable(n) { set<Value>(v); }
-
-  variable(variable const&) = delete;
-  variable(variable&&) = delete;
-
-  value<Type> get() const {
-    auto v = module_builder::current_builder()->ir_builder().CreateAlignedLoad(
-        variable_, llvm::MaybeAlign(detail::type<Type>::alignment));
-    return value<Type>{v, name_};
-  }
-
-  template<typename V> void set(V const& v) requires IsValue<V>&& std::same_as<Type, typename V::value_type> {
-    auto& mb = *module_builder::current_builder();
-    auto line_no = mb.source_code_.add_line(fmt::format("{} = {};", name_, v));
-    mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
-    mb.ir_builder().CreateAlignedStore(v.eval(), variable_, llvm::MaybeAlign(detail::type<Type>::alignment));
-  }
-
-  template<typename T = Type, typename Value> typename std::enable_if_t<std::is_array_v<T>, void> set(Value const& v) {}
-
-  // TODO
-  // address-of operator gets you the pointer to the variable.
-  // Type *operator&() { }
-
-  template<typename T = Type, typename Value>
-      value<std::remove_all_extents_t<T>> operator[](Value const& v) &
-      requires IsArray<T>&& LLVMIntegralType<typename Value::value_type> {
-    using ElementType = typename std::remove_all_extents_t<T>;
-
-    auto& mb = *module_builder::current_builder();
-
-    auto idx = v.eval();
-
-    if constexpr (sizeof(typename Value::value_type) < sizeof(uint64_t)) {
-      if constexpr (std::is_unsigned_v<typename Value::value_type>) {
-        idx = mb.ir_builder().CreateZExt(idx, detail::type<uint64_t>::llvm());
-      } else {
-        idx = mb.ir_builder().CreateSExt(idx, detail::type<int64_t>::llvm());
-      }
-    }
-
-    auto elem_ptr = mb.ir_builder().CreateInBoundsGEP(variable_, idx);
-
-    auto temp_storage = mb.ir_builder().CreateAlloca(detail::type<ElementType>::llvm(), nullptr, "temporary_storage");
-
-    auto load = mb.ir_builder().CreateAlignedLoad(elem_ptr, llvm::MaybeAlign(detail::type<ElementType>::alignment));
-
-    return value<std::remove_all_extents_t<T>>{load, "test_name"};
-  }
-
-  template<typename T = Type, typename IndexValue, typename Value>
-  value<std::remove_all_extents_t<T>>
-  setElem(IndexValue const& idx_v, Value const&& value_v) requires IsArray<T>&& LLVMIntegralType<
-      typename IndexValue::value_type>&& std::same_as<std::remove_all_extents_t<T>, typename Value::value_type> {
-    auto& mb = *module_builder::current_builder();
-    auto idx = idx_v.eval();
-
-    if constexpr (sizeof(typename IndexValue::value_type) < sizeof(uint64_t)) {
-      if constexpr (std::is_unsigned_v<typename IndexValue::value_type>) {
-        idx = mb.ir_builder().CreateZExt(idx, detail::type<uint64_t>::llvm());
-      } else {
-        idx = mb.ir_builder().CreateSExt(idx, detail::type<int64_t>::llvm());
-      }
-    }
-
-    auto elem = mb.ir_builder().CreateInBoundsGEP(variable_, idx);
-    mb.ir_builder().CreateAlignedStore(value_v.eval(), idx,
-                                       llvm::MaybeAlign(detail::type<typename Value::value_type>::alignment));
-    return std::move(value_v);
-  }
-};
 
 } // namespace codegen
