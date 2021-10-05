@@ -54,16 +54,16 @@ struct type_reverse_lookup {
       return nullptr;      
     } else if (type->isIntegerTy(1)) {
       // bool type
-      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 8,
+      return jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 8,
                                                                                          llvm::dwarf::DW_ATE_boolean);
     } else if (type->isIntegerTy()) {
       assert(!type->isIntegerTy(1));
       // TODO: implement unsigned
-      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(
+      return jit_module_builder::current_builder()->debug_builder().createBasicType(
         ty_name, type->getIntegerBitWidth(), llvm::dwarf::DW_ATE_signed);
 
     } else if (type->isFloatTy()) {
-      return codegen::jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
+      return jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
                                                                                          llvm::dwarf::DW_ATE_float);
     } else {
       llvm_unreachable("unimplemented");
@@ -72,22 +72,18 @@ struct type_reverse_lookup {
 };
 
 class variable : public value {
-  llvm::Instruction* variable_;
-  std::string name_;
-
-  explicit variable(std::string const& n, llvm::Type *llvm_type) : name_(n) {
+  explicit variable(std::string const& n, llvm::Type *llvm_type) : value(nullptr, n) {
     auto& mb = *jit_module_builder::current_builder();
-    auto& context = mb.context();
 
     auto alloca_builder =
         llvm::IRBuilder<>(&mb.current_function()->getEntryBlock(), mb.current_function()->getEntryBlock().begin());
-    variable_ = alloca_builder.CreateAlloca(llvm_type, nullptr, name_);
+    value_ = alloca_builder.CreateAlloca(llvm_type, nullptr, name_);
 
     auto line_no = mb.source_code_.add_line(fmt::format("{} {};", type_reverse_lookup::name(llvm_type), name_));
     auto& debug_builder = mb.debug_builder();
     auto dbg_variable = debug_builder.createAutoVariable(
         mb.source_code_.debug_scope(), name_, mb.source_code_.debug_file(), line_no, type_reverse_lookup::dbg(llvm_type));
-    debug_builder.insertDeclare(variable_, dbg_variable, debug_builder.createExpression(),
+    debug_builder.insertDeclare(value_, dbg_variable, debug_builder.createExpression(),
                                 mb.get_debug_location(line_no), mb.ir_builder().GetInsertBlock());
   }
 

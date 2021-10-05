@@ -30,7 +30,7 @@ namespace codegen {
 
 template<typename TrueBlockLambda, typename FalseBlockLambda>
 inline void if_(value&& cnd, TrueBlockLambda&& tb, FalseBlockLambda&& fb) {
-  assert(cnd.get_type() == detail::runtime_type::BoolTy);
+  assert(cnd.isBoolType());
   auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
@@ -78,7 +78,7 @@ inline void if_(value&& cnd, TrueBlockLambda&& tb, FalseBlockLambda&& fb) {
 
 template<typename TrueBlockLambda>
 inline void if_(value&& cnd, TrueBlockLambda&& tb) {
-  assert(cnd.get_type() == detail::runtime_type::BoolTy);
+  assert(cnd.isBoolType());
   auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
@@ -109,39 +109,45 @@ inline void if_(value&& cnd, TrueBlockLambda&& tb) {
 }
 
 // TODO: this needs to be converted to variadic function.
-template<typename ReturnType, typename... Arguments, typename... Values>
-inline value call(function_ref const& fn, value&... args) {
+inline value call(function_ref const& fn, llvm::ArrayRef<value> args) {
   auto& mb = *jit_module_builder::current_builder();
 
   {
     auto str = std::stringstream{};
     str << fn.name() << "_ret = " << fn.name() << "(";
-    (void)(str << ... << fmt::format("{}, ", args));
+
+    for (auto &v : args) {
+      str << fmt::format("{}, ", v);
+    }
+
     str << ");";
     auto line_no = mb.source_code_.add_line(str.str());
     mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
   }
 
   auto values = std::vector<llvm::Value*>{};
-  [[maybe_unused]] auto _ = {0, ((values.emplace_back(args.eval())), 0)...};
+  for (auto &v : args) {
+    values.emplace_back(v.eval());
+  }
 
   auto ret = mb.ir_builder().CreateCall(fn, values);
   return value{ret, fmt::format("{}_ret", fn.name())};
 }
 
 inline auto load(value ptr) {
-  auto elem_type = ptr.getPointerElementType();
+  auto *elem_type = ptr.get_type()->getPointerElementType();
 
   auto& mb = *jit_module_builder::current_builder();
 
-  auto id = fmt::format("val{}", detail::id_counter++);
+  auto id = fmt::format("val{}", ::codegen::detail::id_counter++);
 
   auto line_no = mb.source_code_.add_line(fmt::format("{} = *{}", id, ptr));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
   auto v = mb.ir_builder().CreateAlignedLoad(ptr.eval(), llvm::MaybeAlign());
 
   auto dbg_value = mb.debug_builder().createAutoVariable(
-      mb.source_code_.debug_scope(), id, mb.source_code_.debug_file(), line_no, detail::reverse_type_lookup::dbg(elem_type));
+      mb.source_code_.debug_scope(), id, mb.source_code_.debug_file(),
+      line_no, ::codegen::detail::type_reverse_lookup::dbg(elem_type));
   mb.debug_builder().insertDbgValueIntrinsic(v, dbg_value, mb.debug_builder().createExpression(),
                                              mb.get_debug_location(line_no), mb.ir_builder().GetInsertBlock());
   return value{v, id};
@@ -161,10 +167,11 @@ template<typename BodyLambda>
 inline void while_(value cnd_fn, BodyLambda && bdy) {
   auto& mb = *jit_module_builder::current_builder();
 
+  assert(cnd_fn.isBoolType());
+
   auto line_no = mb.source_code_.current_line() + 1;
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
-  auto cnd = cnd_fn();
-  mb.source_code_.add_line(fmt::format("while ({}) {{", cnd));
+  mb.source_code_.add_line(fmt::format("while ({}) {{", cnd_fn));
 
   auto while_continue = llvm::BasicBlock::Create(mb.context(), "while_continue", mb.current_function());
   auto while_iteration = llvm::BasicBlock::Create(mb.context(), "while_iteration");
@@ -175,7 +182,7 @@ inline void while_(value cnd_fn, BodyLambda && bdy) {
   mb.ir_builder().CreateBr(while_continue);
   mb.ir_builder().SetInsertPoint(while_continue);
 
-  mb.ir_builder().CreateCondBr(cnd_fn().eval(), while_iteration, while_break);
+  mb.ir_builder().CreateCondBr(cnd_fn.eval(), while_iteration, while_break);
 
   mb.source_code_.enter_scope();
 

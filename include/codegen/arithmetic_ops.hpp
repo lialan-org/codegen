@@ -42,7 +42,7 @@ enum class arithmetic_operation_type {
   xor_,
 };
 
-template<arithmetic_operation_type Op> class arithmetic_operation : public codegen::value {
+template<arithmetic_operation_type Op> class arithmetic_operation {
   value lhs_;
   value rhs_;
 
@@ -51,8 +51,13 @@ public:
     assert(lhs_.get_type() == rhs_.get_type());
   }
 
+  value gen_value() {
+    auto *val = eval();
+    return value{val, fmt::format("{}", *this)};
+  }
+
   llvm::Value* eval() const {
-    if constexpr (lhs_.isIntegerType()) {
+    if (lhs_.isIntegerType()) {
       switch (Op) {
       case arithmetic_operation_type::add:
         return codegen::jit_module_builder::current_builder()->ir_builder().CreateAdd(lhs_.eval(), rhs_.eval());
@@ -88,6 +93,8 @@ public:
         return codegen::jit_module_builder::current_builder()->ir_builder().CreateFDiv(lhs_.eval(), rhs_.eval());
       case arithmetic_operation_type::smod:
         return codegen::jit_module_builder::current_builder()->ir_builder().CreateFRem(lhs_.eval(), rhs_.eval());
+      case arithmetic_operation_type::udiv: [[fallthrough]];
+      case arithmetic_operation_type::umod: [[fallthrough]];
       case arithmetic_operation_type::and_: [[fallthrough]];
       case arithmetic_operation_type::or_: [[fallthrough]];
       case arithmetic_operation_type::xor_: abort();
@@ -132,6 +139,11 @@ public:
     assert(rhs_.isIntegerType() || rhs_.isPointerType() || rhs_.isFloatType());
   }
 
+  value gen_value() {
+    auto *val = eval();
+    return value{val, fmt::format("{}", *this)};
+  }
+
   llvm::Value* eval() const {
     llvm_unreachable("unimplemented");
     /*
@@ -168,36 +180,36 @@ public:
 
 // TODO: add unsigned operations.
 
-auto operator+(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::add>(std::move(lhs), std::move(rhs));
+value operator+(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::add>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-auto operator-(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::sub>(std::move(lhs), std::move(rhs));
+value operator-(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::sub>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-auto operator*(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::mul>(std::move(lhs), std::move(rhs));
+value operator*(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::mul>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-auto operator/(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::sdiv>(std::move(lhs), std::move(rhs));
+value operator/(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::sdiv>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-auto operator%(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::umod>(std::move(lhs), std::move(rhs));
+value operator%(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::umod>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-auto operator&(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::and_>(std::move(lhs), std::move(rhs));
+value operator&(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::and_>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-auto operator|(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::or_>(std::move(lhs), std::move(rhs));
+value operator|(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::or_>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-auto operator^(value lhs, value rhs) {
-  return detail::arithmetic_operation<detail::arithmetic_operation_type::xor_>(std::move(lhs), std::move(rhs));
+value operator^(value lhs, value rhs) {
+  return detail::arithmetic_operation<detail::arithmetic_operation_type::xor_>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
 /*

@@ -31,10 +31,8 @@ namespace codegen::builtin {
 using namespace codegen;
 
 void memcpy(value dst, value src, value n) {
-  auto n_val = n.eval();
   assert(n.isIntegerType());
 
-  using namespace detail;
   auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("memcpy({}, {}, {});", dst, src, n));
@@ -46,7 +44,6 @@ void memcpy(value dst, value src, value n) {
 
 value memcmp(value src1, value src2, value n) {
   assert(src1.isPointerType() && src2.isPointerType());
-  using namespace detail;
   auto& mb = *jit_module_builder::current_builder();
 
   auto *i32type = llvm::IntegerType::get(mb.context(), 32);
@@ -89,5 +86,7 @@ template<typename Value> auto bswap(Value v) {
   return detail::bswap_impl<Value>(v);
 }
 */
+
+} //namespace detail
 
 } // namespace codegen::builtin

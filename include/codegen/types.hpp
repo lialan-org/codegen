@@ -11,6 +11,7 @@
 namespace codegen {
 
 class value {
+protected:
   llvm::Value* value_;
   std::string name_;
 
@@ -51,7 +52,7 @@ public:
   bool isSignedIntegerType() const { }
   */
 
-  bool getPointerElementType() const {
+  bool isPointerElementType() const {
     assert(isPointerType());
     llvm::PointerType * ptr_type = llvm::dyn_cast<llvm::PointerType>(get_type());
     return ptr_type->getElementType();
