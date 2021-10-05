@@ -27,6 +27,98 @@
 
 namespace codegen {
 
+// We have another flavor of wrappers inside codegen::jit namespace. 
+// IT does not take template arguments because we need to:
+// 1. run it at runtime 
+// 2. do codegen incrementally
+// 3. need to store intemediary results.
+
+namespace jit {
+
+struct type_reverse_lookup {
+  static std::string name(llvm::Type *type) {
+    if (type->isVoidTy()) {
+      return "void";
+    } else if (type->isIntegerTy(1)) {
+      return "bool";
+    } else if (type->isIntegerTy()) {
+      int32_t bitwidth = type->getIntegerBitWidth();
+      return fmt::format("s{}", bitwidth);
+    }else if (type->isFloatTy()) {
+      return "f32";
+    } else {
+      llvm_unreachable("unimplemented");
+    }
+  }
+
+  static llvm::DIType* dbg(llvm::Type* type)  {
+    std::string ty_name = type_reverse_lookup::name(type);
+    if (type->isVoidTy()) {
+      return nullptr;      
+    } else if (type->isIntegerTy(1)) {
+      // bool type
+      return codegen::module_builder::current_builder()->debug_builder().createBasicType(ty_name, 8,
+                                                                                         llvm::dwarf::DW_ATE_boolean);
+    } else if (type->isIntegerTy()) {
+      assert(!type->isIntegerTy(1));
+      // TODO: implement unsigned
+      return codegen::module_builder::current_builder()->debug_builder().createBasicType(
+        ty_name, type->getIntegerBitWidth(), llvm::dwarf::DW_ATE_signed);
+
+    } else if (type->isFloatTy()) {
+      return codegen::module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
+                                                                                         llvm::dwarf::DW_ATE_float);
+    } else {
+      llvm_unreachable("unimplemented");
+    }
+  }
+};
+
+class variable {
+  llvm::Instruction* variable_;
+  std::string name_;
+
+  explicit variable(std::string const& n, llvm::Type* type) : name_(n) {
+    auto& mb = *module_builder::current_builder();
+
+    auto alloca_builder =
+        llvm::IRBuilder<>(&mb.current_function()->getEntryBlock(), mb.current_function()->getEntryBlock().begin());
+    variable_ = alloca_builder.CreateAlloca(type, nullptr, name_);
+
+    auto line_no = mb.source_code_.add_line(fmt::format("{} {};", type_reverse_lookup::name(type), name_));
+    auto& debug_builder = mb.debug_builder();
+    auto dbg_variable = debug_builder.createAutoVariable(
+        mb.source_code_.debug_scope(), name_, mb.source_code_.debug_file(), line_no, type_reverse_lookup::dbg(type));
+    debug_builder.insertDeclare(variable_, dbg_variable, debug_builder.createExpression(),
+                                mb.get_debug_location(line_no), mb.ir_builder().GetInsertBlock());
+  }
+
+public:
+  template<int size>
+  static variable variable_integer(std::string const &n) {
+    auto& context = module_builder::current_builder()->context();
+    return variable(n, llvm::IntegerType::get(context, size));
+  }
+
+  static variable variable_bool(std::string const& n) {
+    return variable_integer<1>(n);
+  }
+
+  static variable variable_i32(std::string const &n) {
+    return variable_integer<32>(n);
+  }
+
+  static variable variable_float(std::string const &n) {
+    auto& context = module_builder::current_builder()->context();
+    return variable(n, llvm::Type::getFloatTy(context));
+  }
+
+  // TODO: array, struct, double, string, byte types.
+}; // class variable
+
+} // namespace jit
+
+
 template<typename T> concept Variable = !std::is_const_v<T> && !std::is_volatile_v<T>;
 
 template<Variable Type> class variable {
@@ -119,32 +211,6 @@ public:
                                        llvm::MaybeAlign(detail::type<typename Value::value_type>::alignment));
     return std::move(value_v);
   }
-
-  // lvalue
-  /*
-  template<typename T = Type, typename Value>
-  typename std::enable_if_t<std::is_array_v<T> &&
-                            std::is_integral_v<typename Value::value_type>,
-            value<std::remove_all_extents_t<T>>>
-  operator[](Value const& v) && {
-    //static_assert(sizeof(Value::value_type) < sizeof(int64_t));
-    auto& mb = *module_builder::current_builder();
-
-    auto idx = v.eval();
-
-    if constexpr (sizeof(typename Value::value_type) < sizeof(uint64_t)) {
-      if constexpr (std::is_unsigned_v<Value::value_type>) {
-        idx = mb.ir_builder().CreateZExt(idx, detail::type<uint64_t>::llvm());
-      } else {
-        idx = mb.ir_builder().CreateSExt(idx, detail::type<int64_t>::llvm());
-      }
-    }
-
-    auto elem = mb.ir_builder().CreateInBoundsGEP(variable_, idx);
-    std::string value_name = fmt::format("{}[{}]", name_, idx.name_);
-    return value<std::remove_all_extents_t<T>>{elem, value_name};
-  }
-  */
 };
 
 } // namespace codegen
