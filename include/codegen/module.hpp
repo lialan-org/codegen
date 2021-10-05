@@ -24,11 +24,11 @@
 
 namespace codegen {
 
-template<typename ReturnType, typename... Arguments> class function_ref;
-
 class module {
   std::unique_ptr<llvm::orc::LLJIT> lljit_;
   llvm::orc::MangleAndInterner mangle_;
+
+  std::unordered_map<std::string, std::function<void*>> function_entries_;
 
 private:
   module(std::unique_ptr<llvm::orc::LLJIT> lljit, llvm::orc::MangleAndInterner const& mangle)
@@ -41,7 +41,7 @@ public:
   module(module&&) = delete;
 
   template<typename ReturnType, typename... Arguments>
-  auto get_address(function_ref<ReturnType, Arguments...> const& fn) {
+  auto get_address(std::string const &name) {
     auto entry_pointer = cantFail(lljit_->lookup(fn.name()));
     return llvm::jitTargetAddressToFunction<ReturnType (*)(Arguments...)>(entry_pointer.getAddress());
   }

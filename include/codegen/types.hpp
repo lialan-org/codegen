@@ -221,7 +221,7 @@ public:
 
 class jit_function_builder {
   void prepare_arguments(llvm::Function *fn) {
-    auto& mb = *codegen::module_builder::current_builder();
+    auto& mb = *codegen::jit_module_builder::current_builder();
     auto& debug_builder = mb.debug_builder();
 
     for (size_t idx = 0; idx < fn->arg_size(); ++idx)  {
@@ -241,7 +241,7 @@ class jit_function_builder {
 public:
   /// we take a llvm::FunctionType because users might need to construct it outside in their cases
   void start_creating_function(std::string const& name, llvm::FunctionType* func_type) {
-    auto& mb = *codegen::module_builder::current_builder();
+    auto& mb = *codegen::jit_module_builder::current_builder();
     assert(!mb.current_function() && "Cannot define a new function inside another funciton");
     auto fn = llvm::Function::Create(func_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module());
     mb.current_function() = fn;
@@ -274,7 +274,7 @@ public:
   }
 
   void finish_creating_function() {
-    auto& mb = *codegen::module_builder::current_builder();
+    auto& mb = *codegen::jit_module_builder::current_builder();
     mb.source_code_.leave_scope();
     mb.source_code_.add_line("}");
 
@@ -282,8 +282,6 @@ public:
     mb.current_function() = nullptr;
   }
 };
-
-template<typename> class function_declaration_builder;
 
 template<typename ReturnType, typename... Arguments> class function_declaration_builder<ReturnType(Arguments...)> {
 public:

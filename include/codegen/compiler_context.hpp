@@ -60,7 +60,7 @@ class compiler_context {
 
   std::unordered_map<std::string, llvm::StructType*> custom_types;
 
-  friend class module_builder;
+  friend class jit_module_builder;
 
 private:
   explicit compiler_context(std::string const& context_name, llvm::orc::JITTargetMachineBuilder tmb,
@@ -108,20 +108,6 @@ public:
   }
 
   const std::string& name() { return name_; }
-
-  template<typename... ElementTypes> void add_aligned_struct_type(std::string const& name) {
-    // build type;
-    llvm::StructType* llvm_type = nullptr;
-
-    // check if we are overwriting any existing types.
-
-    bool check = custom_types.insert({name, llvm_type}).second;
-    if (!check) {
-      // insert failure.
-    }
-  }
-
-  llvm::StructType* get_struct_type(std::string const& name) { llvm_unreachable("not implemented"); }
 };
 
 } // namespace codegen
