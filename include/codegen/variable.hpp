@@ -32,8 +32,6 @@ namespace codegen {
 // 1. run it at runtime 
 // 2. do codegen incrementally
 // 3. need to store intemediary results.
-
-
 struct type_reverse_lookup {
   static std::string name(llvm::Type *type) {
     if (type->isVoidTy()) {
@@ -77,17 +75,39 @@ class variable {
   llvm::Instruction* variable_;
   std::string name_;
 
-  explicit variable(std::string const& n, llvm::Type* type) : name_(n) {
+  detail::variable_type type_;
+  uint64_t bitwidth_;
+
+  explicit variable(std::string const& n, detail::variable_type type, size_t bitwidth = 0) : name_(n) {
     auto& mb = *jit_module_builder::current_builder();
+    auto& context = mb.context();
+
+    llvm::Type * llvm_type = nullptr;
+    switch (type) {
+      using detail::variable_type;
+      case variable_type::BoolTy:
+        llvm_type = llvm::IntegerType::get(context, 1);
+        break;
+      case variable_type::IntTy:
+        assert(bitwidth != 0 && "integer type cannot have zero bitwidth");
+        llvm_type = llvm::IntegerType::get(context, bitwidth);
+        break;
+      case variable_type::FloatTy:
+        llvm_type = llvm::Type::getFloatTy(context);
+        break;
+      default:
+        llvm_unreachable("unimplemented");
+    }
+    assert(llvm_type);
 
     auto alloca_builder =
         llvm::IRBuilder<>(&mb.current_function()->getEntryBlock(), mb.current_function()->getEntryBlock().begin());
-    variable_ = alloca_builder.CreateAlloca(type, nullptr, name_);
+    variable_ = alloca_builder.CreateAlloca(llvm_type, nullptr, name_);
 
-    auto line_no = mb.source_code_.add_line(fmt::format("{} {};", type_reverse_lookup::name(type), name_));
+    auto line_no = mb.source_code_.add_line(fmt::format("{} {};", type_reverse_lookup::name(llvm_type), name_));
     auto& debug_builder = mb.debug_builder();
     auto dbg_variable = debug_builder.createAutoVariable(
-        mb.source_code_.debug_scope(), name_, mb.source_code_.debug_file(), line_no, type_reverse_lookup::dbg(type));
+        mb.source_code_.debug_scope(), name_, mb.source_code_.debug_file(), line_no, type_reverse_lookup::dbg(llvm_type));
     debug_builder.insertDeclare(variable_, dbg_variable, debug_builder.createExpression(),
                                 mb.get_debug_location(line_no), mb.ir_builder().GetInsertBlock());
   }
@@ -95,8 +115,7 @@ class variable {
 public:
   template<int size>
   static variable variable_integer(std::string const &n) {
-    auto& context = module_builder::current_builder()->context();
-    return variable(n, llvm::IntegerType::get(context, size));
+    return variable(n, variable_type::IntTy, size);
   }
 
   static variable variable_bool(std::string const& n) {
@@ -108,8 +127,7 @@ public:
   }
 
   static variable variable_float(std::string const &n) {
-    auto& context = jit_module_builder::current_builder()->context();
-    return variable(n, llvm::Type::getFloatTy(context));
+    return variable(n, variable_type::FloatTy, sizeof(float));
   }
 
   // TODO: array, struct, double, string, byte types.

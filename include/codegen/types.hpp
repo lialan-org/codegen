@@ -13,15 +13,18 @@ namespace codegen {
 class value {
   llvm::Value* value_;
   std::string name_;
+  detail::runtime_type type_;
 
 public:
-  explicit value(llvm::Value* v, std::string const& n) : value_(v), name_(n) {}
+  explicit value(llvm::Value* v, std::string const& n, detail::runtime_type type)
+    : value_(v), name_(n), type_(type) {}
 
   value(value const&) = default;
   value(value&&) = default;
   void operator=(value const&) = delete;
   void operator=(value&&) = delete;
 
+  detail::runtime_type get_type() const { return type_; }
   operator llvm::Value *() const noexcept { return value_; }
   llvm::Value* eval() const { return value_; }
   friend std::ostream& operator<<(std::ostream& os, value v) { return os << v.name_; }
@@ -110,6 +113,7 @@ public:
 };
 
 class function_declaration_builder {
+  // TODO: check if we need to carry runtime type inside function_ref
 public:
   codegen::function_ref operator()(std::string const& name, llvm::FunctionType *func_type) {
     auto& mb = *codegen::jit_module_builder::current_builder();
@@ -231,18 +235,6 @@ auto module_builder::declare_external_function(std::string const& name, Function
   declare_external_symbol(name, reinterpret_cast<void*>(fn));
 
   return fn_ref;
-}
-
-template<typename ReturnType, typename... Arguments>
-llvm::DISubprogram* module_builder::source_code_generator::enter_function_scope(std::string const& function_name) {
-  std::vector<llvm::Metadata*> dbg_types = {detail::type<ReturnType>::dbg(), detail::type<Arguments>::dbg()...};
-  auto dbg_fn_type = dbg_builder_.createSubroutineType(dbg_builder_.getOrCreateTypeArray(dbg_types));
-  auto dbg_fn_scope = dbg_builder_.createFunction(
-      debug_scope(), function_name, function_name, debug_file(), current_line(), dbg_fn_type, current_line(),
-      llvm::DINode::FlagPrototyped,
-      llvm::DISubprogram::DISPFlags::SPFlagDefinition | llvm::DISubprogram::DISPFlags::SPFlagOptimized);
-  dbg_scopes_.push(dbg_fn_scope);
-  return dbg_fn_scope;
 }
 
 llvm::DISubprogram*

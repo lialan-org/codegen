@@ -11,6 +11,15 @@ template<class T, template<class> class U> struct is_instance<U<T>, U> : public 
 // `typename` here could be change to LLVMType but that would cause clang to complain because LLVMType is
 // more specialized.
 
+// we need to carry extra type info because intermediary values
+// carries a type too.
+enum class runtime_type {
+  BoolTy,
+  IntTy,
+  FloatTy,
+  // TODO: more types
+}; 
+
 // an easy lookup table for JIT debugging.
 struct type_reverse_lookup {
 

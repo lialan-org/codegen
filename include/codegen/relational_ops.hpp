@@ -37,20 +37,19 @@ enum class relational_operation_type {
   lt,
 };
 
-template<relational_operation_type Op, typename LHS, typename RHS> class relational_operation {
-  LHS lhs_;
-  RHS rhs_;
-
-  using operand_type = typename LHS::value_type;
-  static_assert(std::is_same_v<typename LHS::value_type, typename RHS::value_type>);
+template<relational_operation_type Op> class relational_operation {
+  value lhs_;
+  value rhs_;
 
 public:
   using value_type = bool;
 
-  relational_operation(LHS lhs, RHS rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
+  relational_operation(value lhs, value rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
+    assert(lhs_.getType() == rhs_.getType());
+  }
 
   llvm::Value* eval() const {
-    if constexpr (std::is_integral_v<operand_type>) {
+    if (lhs_.getType().isIntegerTy()) {
       switch (Op) {
       case relational_operation_type::eq:
         return codegen::module_builder::current_builder()->ir_builder().CreateICmpEQ(lhs_.eval(), rhs_.eval());
@@ -81,7 +80,7 @@ public:
           return codegen::module_builder::current_builder()->ir_builder().CreateICmpULT(lhs_.eval(), rhs_.eval());
         }
       }
-    } else {
+    } else if (lhs_.getType().isFloatTy()) {
       switch (Op) {
       case relational_operation_type::eq:
         return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOEQ(lhs_.eval(), rhs_.eval());
@@ -96,6 +95,8 @@ public:
       case relational_operation_type::lt:
         return codegen::module_builder::current_builder()->ir_builder().CreateFCmpOLT(lhs_.eval(), rhs_.eval());
       }
+    } else {
+      llvm_unreachable("unimplemented");
     }
   }
 
@@ -116,46 +117,28 @@ public:
 
 } // namespace detail
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator==(LHS lhs, RHS rhs) {
-  return detail::relational_operation<detail::relational_operation_type::eq, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator==(value lhs, value rhs) {
+  return detail::relational_operation<detail::relational_operation_type::eq>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator!=(LHS lhs, RHS rhs) {
-  return detail::relational_operation<detail::relational_operation_type::ne, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator!=(value lhs, value rhs) {
+  return detail::relational_operation<detail::relational_operation_type::ne>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator>=(LHS lhs, RHS rhs) {
-  return detail::relational_operation<detail::relational_operation_type::ge, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator>=(value lhs, value rhs) {
+  return detail::relational_operation<detail::relational_operation_type::ge>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator>(LHS lhs, RHS rhs) {
-  return detail::relational_operation<detail::relational_operation_type::gt, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator>(value lhs, value rhs) {
+  return detail::relational_operation<detail::relational_operation_type::gt>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator<=(LHS lhs, RHS rhs) {
-  return detail::relational_operation<detail::relational_operation_type::le, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator<=(value lhs, value rhs) {
+  return detail::relational_operation<detail::relational_operation_type::le>(std::move(lhs), std::move(rhs));
 }
 
-template<typename LHS, typename RHS,
-         typename = std::enable_if_t<std::is_arithmetic_v<typename RHS::value_type> &&
-                                     std::is_same_v<typename RHS::value_type, typename LHS::value_type>>>
-auto operator<(LHS lhs, RHS rhs) {
-  return detail::relational_operation<detail::relational_operation_type::lt, LHS, RHS>(std::move(lhs), std::move(rhs));
+auto operator<(value lhs, value rhs) {
+  return detail::relational_operation<detail::relational_operation_type::lt>(std::move(lhs), std::move(rhs));
 }
 
 } // namespace codegen

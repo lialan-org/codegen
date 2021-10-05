@@ -28,10 +28,9 @@
 
 namespace codegen {
 
-template<ConditionType Condition, typename TrueBlock, typename FalseBlock,
-         typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
-inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
-  auto& mb = *module_builder::current_builder();
+template<typename TrueBlock, typename FalseBlock>
+inline void if_(value&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
+  auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
@@ -76,10 +75,9 @@ inline void if_(Condition&& cnd, TrueBlock&& tb, FalseBlock&& fb) {
   mb.ir_builder().SetInsertPoint(merge_block);
 }
 
-template<typename Condition, typename TrueBlock,
-         typename = std::enable_if_t<std::is_same_v<typename std::decay_t<Condition>::value_type, bool>>>
-inline void if_(Condition&& cnd, TrueBlock&& tb) {
-  auto& mb = *module_builder::current_builder();
+template<typename TrueBlock>
+inline void if_(value&& cnd, TrueBlock&& tb) {
+  auto& mb = *jit_module_builder::current_builder();
 
   auto line_no = mb.source_code_.add_line(fmt::format("if ({}) {{", cnd));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
@@ -108,11 +106,10 @@ inline void if_(Condition&& cnd, TrueBlock&& tb) {
   mb.ir_builder().SetInsertPoint(merge_block);
 }
 
+// TODO: this needs to be converted to variadic function.
 template<typename ReturnType, typename... Arguments, typename... Values>
-inline value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, Values&&... args) {
-  static_assert((std::is_same_v<Arguments, typename std::decay_t<Values>::value_type> && ...));
-
-  auto& mb = *module_builder::current_builder();
+inline value call(function_ref const& fn, value&... args) {
+  auto& mb = *jit_module_builder::current_builder();
 
   {
     auto str = std::stringstream{};
@@ -127,26 +124,24 @@ inline value<ReturnType> call(function_ref<ReturnType, Arguments...> const& fn, 
   [[maybe_unused]] auto _ = {0, ((values.emplace_back(args.eval())), 0)...};
 
   auto ret = mb.ir_builder().CreateCall(fn, values);
-  return value<ReturnType>{ret, fmt::format("{}_ret", fn.name())};
+  return value{ret, fmt::format("{}_ret", fn.name())};
 }
 
-template<typename Pointer, typename = std::enable_if_t<std::is_pointer_v<typename std::decay_t<Pointer>::value_type>>>
-inline auto load(Pointer ptr) {
-  using value_type = std::remove_cv_t<std::remove_pointer_t<typename std::decay_t<Pointer>::value_type>>;
-  auto& mb = *module_builder::current_builder();
+inline auto load(value ptr) {
+  // assert(ptr.isPointerTy());
+  auto& mb = *jit_module_builder::current_builder();
 
   auto id = fmt::format("val{}", detail::id_counter++);
 
   auto line_no = mb.source_code_.add_line(fmt::format("{} = *{}", id, ptr));
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
-  auto v = mb.ir_builder().CreateAlignedLoad(ptr.eval(), llvm::MaybeAlign(detail::type<value_type>::alignment));
+  auto v = mb.ir_builder().CreateAlignedLoad(ptr.eval(), llvm::MaybeAlign());
 
   auto dbg_value = mb.debug_builder().createAutoVariable(
-      mb.source_code_.debug_scope(), id, mb.source_code_.debug_file(), line_no, detail::type<value_type>::dbg());
+      mb.source_code_.debug_scope(), id, mb.source_code_.debug_file(), line_no, reverse_type_lookup::dbg(ptr.getType()));
   mb.debug_builder().insertDbgValueIntrinsic(v, dbg_value, mb.debug_builder().createExpression(),
                                              mb.get_debug_location(line_no), mb.ir_builder().GetInsertBlock());
-
-  return value<value_type>{v, id};
+  return value{v, id};
 }
 
 template<
