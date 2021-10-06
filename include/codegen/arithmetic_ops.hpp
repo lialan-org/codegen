@@ -180,35 +180,35 @@ public:
 
 // TODO: add unsigned operations.
 
-value operator+(value lhs, value rhs) {
+inline value operator+(value lhs, value rhs) {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::add>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator-(value lhs, value rhs) {
+inline value operator-(value lhs, value rhs) {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::sub>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator*(value lhs, value rhs) {
+inline value operator*(value lhs, value rhs) {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::mul>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator/(value lhs, value rhs) {
+inline value operator/(value lhs, value rhs) {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::sdiv>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator%(value lhs, value rhs) {
+inline value operator%(value lhs, value rhs) {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::umod>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator&(value lhs, value rhs) {
+inline value operator&(value lhs, value rhs) {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::and_>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator|(value lhs, value rhs) {
+inline value operator|(value lhs, value rhs) {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::or_>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator^(value lhs, value rhs) {
+inline value operator^(value lhs, value rhs) {
   return detail::arithmetic_operation<detail::arithmetic_operation_type::xor_>(std::move(lhs), std::move(rhs)).gen_value();
 }
 

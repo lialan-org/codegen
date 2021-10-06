@@ -30,7 +30,7 @@ namespace codegen::builtin {
 
 using namespace codegen;
 
-void memcpy(value dst, value src, value n) {
+inline void memcpy(value dst, value src, value n) {
   assert(n.isIntegerType());
 
   auto& mb = *jit_module_builder::current_builder();
@@ -42,7 +42,7 @@ void memcpy(value dst, value src, value n) {
       llvm::MaybeAlign(), n.eval());
 }
 
-value memcmp(value src1, value src2, value n) {
+inline value memcmp(value src1, value src2, value n) {
   assert(src1.isPointerType() && src2.isPointerType());
   auto& mb = *jit_module_builder::current_builder();
 

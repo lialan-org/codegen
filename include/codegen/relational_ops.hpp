@@ -124,27 +124,27 @@ public:
 } // namespace detail
 
 // TODO: support unsigned operations.
-value operator==(value lhs, value rhs) {
+inline value operator==(value lhs, value rhs) {
   return detail::relational_operation<detail::relational_operation_type::eq>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator!=(value lhs, value rhs) {
+inline value operator!=(value lhs, value rhs) {
   return detail::relational_operation<detail::relational_operation_type::ne>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator>=(value lhs, value rhs) {
+inline value operator>=(value lhs, value rhs) {
   return detail::relational_operation<detail::relational_operation_type::sge>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator>(value lhs, value rhs) {
+inline value operator>(value lhs, value rhs) {
   return detail::relational_operation<detail::relational_operation_type::sgt>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator<=(value lhs, value rhs) {
+inline value operator<=(value lhs, value rhs) {
   return detail::relational_operation<detail::relational_operation_type::sle>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
-value operator<(value lhs, value rhs) {
+inline value operator<(value lhs, value rhs) {
   return detail::relational_operation<detail::relational_operation_type::slt>(std::move(lhs), std::move(rhs)).gen_value();
 }
 
