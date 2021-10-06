@@ -198,7 +198,7 @@ public:
   void begin_creating_function(std::string const& name, llvm::FunctionType* func_type);
   function_ref end_creating_function();
 
-  [[nodiscard]] class module build() && {
+  [[nodiscard]] std::unique_ptr<codegen::module> build_ptr() && {
     {
       auto ofs = std::ofstream(source_code_.source_file(), std::ios::trunc);
       ofs << source_code_.get();
@@ -210,6 +210,11 @@ public:
     } else {
       // llvm_unreachable("Failed to compile"); // TODO: more error messages.
     }
+
+    return std::make_unique<codegen::module>(std::move(compiler_->lljit_), compiler_->mangle_);
+  }
+
+  [[nodiscard]] class module build() && {
 
     return codegen::module{std::move(compiler_->lljit_), compiler_->mangle_};
   }
