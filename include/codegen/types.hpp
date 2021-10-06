@@ -120,7 +120,7 @@ inline value constant(Type v) {
                      }()};
 }
 
-void jit_module_builder::begin_creating_function(std::string const& name, llvm::FunctionType* func_type) {
+inline void jit_module_builder::begin_creating_function(std::string const& name, llvm::FunctionType* func_type) {
   assert(jit_module_builder::current_builder() == this || !jit_module_builder::current_builder());
   auto& mb = *codegen::jit_module_builder::current_builder();
 
@@ -154,7 +154,7 @@ void jit_module_builder::begin_creating_function(std::string const& name, llvm::
   exited_block_ = false;
 }
 
-function_ref jit_module_builder::end_creating_function() {
+inline function_ref jit_module_builder::end_creating_function() {
   auto& mb = *codegen::jit_module_builder::current_builder();
   mb.source_code_.leave_scope();
   mb.source_code_.add_line("}");
@@ -165,7 +165,7 @@ function_ref jit_module_builder::end_creating_function() {
   return fn_ref;
 }
 
-function_ref jit_module_builder::declare_external_function(std::string const& name, llvm::FunctionType* fn) {
+inline function_ref jit_module_builder::declare_external_function(std::string const& name, llvm::FunctionType* fn) {
   assert(jit_module_builder::current_builder() == this || !jit_module_builder::current_builder());
 
   auto fn_ref = detail::function_declaration_builder{}(name, fn);
@@ -173,7 +173,7 @@ function_ref jit_module_builder::declare_external_function(std::string const& na
   return fn_ref;
 }
 
-llvm::DISubprogram*
+inline llvm::DISubprogram*
 jit_module_builder::source_code_generator::jit_enter_function_scope(std::string const& function_name, llvm::FunctionType* func_type) {
   auto params = func_type->params();
   llvm::SmallVector<llvm::Metadata*> dbg_types(params.size() + 1);
