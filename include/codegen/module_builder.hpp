@@ -24,6 +24,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <string>
 
 #include <llvm/IR/DIBuilder.h>
@@ -87,12 +88,13 @@ public:
     llvm::DIBuilder dbg_builder_;
     llvm::DIFile* dbg_file_;
     std::stack<llvm::DIScope*> dbg_scopes_;
+    bool dump_on_the_fly_;
 
   public:
-    source_code_generator(llvm::Module& module, std::filesystem::path source_file)
+    source_code_generator(llvm::Module& module, std::filesystem::path source_file, bool dump = true)
         : source_file_(source_file), module_(module), dbg_builder_(module_),
           dbg_file_(dbg_builder_.createFile(source_file.string(), source_file.parent_path().string())),
-          dbg_scopes_({dbg_file_}) {
+          dbg_scopes_({dbg_file_}), dump_on_the_fly_(dump) {
       dbg_builder_.createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus, dbg_file_, "jit", true, "", 0);
     }
 
@@ -106,7 +108,11 @@ public:
     }
 
     unsigned add_line(std::string const& line) {
-      source_code_ << std::string(indent_, ' ') << line << "\n";
+      std::string output = std::string(indent_, ' ') + line;
+      source_code_ << output << "\n";
+      if (dump_on_the_fly_) {
+        std::cout << output << std::endl;
+      }
       return line_no_++;
     }
 
