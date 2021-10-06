@@ -28,13 +28,13 @@ class module {
   std::unique_ptr<llvm::orc::LLJIT> lljit_;
   llvm::orc::MangleAndInterner mangle_;
 
-private:
-  module(std::unique_ptr<llvm::orc::LLJIT> lljit, llvm::orc::MangleAndInterner const& mangle)
-      : lljit_(std::move(lljit)), mangle_(std::move(mangle)) {}
 
   friend class jit_module_builder;
 
 public:
+  module(std::unique_ptr<llvm::orc::LLJIT> lljit, llvm::orc::MangleAndInterner const& mangle)
+      : lljit_(std::move(lljit)), mangle_(std::move(mangle)) {}
+
   module(module const&) = delete;
   module(module&&) = delete;
 
