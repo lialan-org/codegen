@@ -59,6 +59,24 @@ public:
   }
 };
 
+void jit_module_builder::prepare_function_arguments(llvm::Function *fn) {
+  auto& mb = *codegen::jit_module_builder::current_builder();
+  auto& debug_builder = mb.debug_builder();
+
+  for (size_t idx = 0; idx < fn->arg_size(); ++idx)  {
+    auto it = fn->getArg(idx);
+    auto name = "arg" + std::to_string(idx);
+    it->setName(name);
+
+    auto dbg_arg = debug_builder.createParameterVariable(mb.source_code_.debug_scope(), name, idx + 1,
+                                                         mb.source_code_.debug_file(), mb.source_code_.current_line(),
+                                                         detail::type_reverse_lookup::dbg(it->getType()));
+    mb.debug_builder().insertDbgValueIntrinsic(&*it, dbg_arg, debug_builder.createExpression(),
+                                               mb.get_debug_location(mb.source_code_.current_line()),
+                                               mb.ir_builder().GetInsertBlock());
+  }
+}
+
 } // namespace codegen
 
 namespace codegen::detail {
@@ -76,70 +94,6 @@ inline llvm::Value* get_constant(Type v) {
     llvm_unreachable("Unsupported type");
   }
 }
-
-class jit_function_builder {
-  void prepare_arguments(llvm::Function *fn) {
-    auto& mb = *codegen::jit_module_builder::current_builder();
-    auto& debug_builder = mb.debug_builder();
-
-    for (size_t idx = 0; idx < fn->arg_size(); ++idx)  {
-      auto it = fn->getArg(idx);
-      auto name = "arg" + std::to_string(idx);
-      it->setName(name);
-
-      auto dbg_arg = debug_builder.createParameterVariable(mb.source_code_.debug_scope(), name, idx + 1,
-                                                           mb.source_code_.debug_file(), mb.source_code_.current_line(),
-                                                           type_reverse_lookup::dbg(it->getType()));
-      mb.debug_builder().insertDbgValueIntrinsic(&*it, dbg_arg, debug_builder.createExpression(),
-                                                 mb.get_debug_location(mb.source_code_.current_line()),
-                                                 mb.ir_builder().GetInsertBlock());
-    }
-  }
-
-public:
-  /// we take a llvm::FunctionType because users might need to construct it outside in their cases
-  void start_creating_function(std::string const& name, llvm::FunctionType* func_type) {
-    auto& mb = *codegen::jit_module_builder::current_builder();
-    assert(!mb.current_function() && "Cannot define a new function inside another funciton");
-    auto fn = llvm::Function::Create(func_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module());
-    mb.current_function() = fn;
-
-    auto dbg_fn_scope = mb.source_code_.jit_enter_function_scope(name, func_type);
-    fn->setSubprogram(dbg_fn_scope);
-    mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(mb.source_code_.current_line()));
-
-    auto block = llvm::BasicBlock::Create(mb.context(), "entry", fn);
-    mb.ir_builder().SetInsertPoint(block);
-
-    auto str = std::stringstream{};
-    str << type_reverse_lookup::name(func_type->getReturnType()) << " " << name << "(";
-    auto params = func_type->params();
-    for (size_t i = 0; i < params.size(); i++) {
-      str << type_reverse_lookup::name(params[i]) + " arg" + std::to_string(i);
-      if (i != params.size() - 1) {
-        str << ", ";
-      }
-    }
-    str << ") {";
-
-    mb.source_code_.add_line(str.str());
-    mb.source_code_.enter_scope();
-
-    prepare_arguments(fn);
-
-    // the next step is to run:
-    //fb(value<Arguments>(&*(args + Idx), "arg" + std::to_string(Idx))...);
-  }
-
-  void finish_creating_function() {
-    auto& mb = *codegen::jit_module_builder::current_builder();
-    mb.source_code_.leave_scope();
-    mb.source_code_.add_line("}");
-
-    mb.source_code_.leave_function_scope();
-    mb.current_function() = nullptr;
-  }
-};
 
 class function_declaration_builder {
   // TODO: check if we need to carry runtime type inside function_ref
@@ -166,12 +120,49 @@ inline value constant(Type v) {
                      }()};
 }
 
-auto jit_module_builder::begin_creating_function(std::string const& name, llvm::FunctionType* func_type) {
+void jit_module_builder::begin_creating_function(std::string const& name, llvm::FunctionType* func_type) {
+  assert(jit_module_builder::current_builder() == this || !jit_module_builder::current_builder());
+  auto& mb = *codegen::jit_module_builder::current_builder();
 
+  assert(!mb.current_function() && "Cannot create function inside function");
+
+  auto fn = llvm::Function::Create(func_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mb.module());
+  mb.current_function() = fn;
+
+  auto dbg_fn_scope = mb.source_code_.jit_enter_function_scope(name, func_type);
+  fn->setSubprogram(dbg_fn_scope);
+  mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(mb.source_code_.current_line()));
+
+  auto block = llvm::BasicBlock::Create(mb.context(), "entry", fn);
+  mb.ir_builder().SetInsertPoint(block);
+
+  auto str = std::stringstream{};
+  str << detail::type_reverse_lookup::name(func_type->getReturnType()) << " " << name << "(";
+  auto params = func_type->params();
+  for (size_t i = 0; i < params.size(); i++) {
+    str << detail::type_reverse_lookup::name(params[i]) + " arg" + std::to_string(i);
+    if (i != params.size() - 1) {
+      str << ", ";
+    }
+  }
+  str << ") {";
+
+  mb.source_code_.add_line(str.str());
+  mb.source_code_.enter_scope();
+
+  prepare_function_arguments(fn);
+  exited_block_ = false;
 }
 
-auto jit_module_builder::end_creating_function() {
+function_ref jit_module_builder::end_creating_function() {
+  auto& mb = *codegen::jit_module_builder::current_builder();
+  mb.source_code_.leave_scope();
+  mb.source_code_.add_line("}");
 
+  mb.source_code_.leave_function_scope();
+  function_ref fn_ref = function_ref{current_function_name_, mb.current_function()};
+  fn_ref.set_function_attribute({"target-cpu", llvm::sys::getHostCPUName()});
+  return fn_ref;
 }
 
 function_ref jit_module_builder::declare_external_function(std::string const& name, llvm::FunctionType* fn) {

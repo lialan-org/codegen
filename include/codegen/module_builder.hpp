@@ -66,6 +66,7 @@ public:
   llvm::Type* get_function_type() const { return function_->getFunctionType(); } 
 };
 
+
 class jit_module_builder {
   compiler_context* compiler_;
   std::unique_ptr<llvm::LLVMContext> context_;
@@ -145,8 +146,12 @@ public:
   loop current_loop_;
   bool exited_block_ = false;
 
+  std::string current_function_name_;
+
   static void register_current_builder(jit_module_builder* builder) { jit_module_builder::current_builder_.reset(builder); }
   static void deregister_current_builder() { jit_module_builder::current_builder_.release(); }
+
+  void prepare_function_arguments(llvm::Function *);
 
 public:
   jit_module_builder(compiler_context& c, std::string const& name, bool enable_debug_codegen = true)
@@ -184,9 +189,8 @@ public:
 
   llvm::Function*& current_function() { return function_; }
 
-  auto begin_creating_function(std::string const& name, llvm::FunctionType* func_type);
-  auto end_creating_function();
-
+  void begin_creating_function(std::string const& name, llvm::FunctionType* func_type);
+  function_ref end_creating_function();
 
   [[nodiscard]] class module build() && {
     {
