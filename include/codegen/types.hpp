@@ -59,7 +59,7 @@ public:
   }
 };
 
-void jit_module_builder::prepare_function_arguments(llvm::Function *fn) {
+inline void jit_module_builder::prepare_function_arguments(llvm::Function *fn) {
   auto& mb = *codegen::jit_module_builder::current_builder();
   auto& debug_builder = mb.debug_builder();
 
