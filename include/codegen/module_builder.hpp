@@ -64,7 +64,7 @@ public:
 
   std::string const& name() const { return name_; }
 
-  llvm::Type* get_function_type() const { return function_->getFunctionType(); } 
+  llvm::FunctionType* get_function_type() const { return function_->getFunctionType(); } 
 };
 
 

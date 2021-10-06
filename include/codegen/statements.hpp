@@ -108,9 +108,12 @@ inline void if_(value&& cnd, TrueBlockLambda&& tb) {
   mb.ir_builder().SetInsertPoint(merge_block);
 }
 
-// TODO: this needs to be converted to variadic function.
 inline value call(function_ref const& fn, llvm::ArrayRef<value> args) {
   auto& mb = *jit_module_builder::current_builder();
+
+  llvm::FunctionType* func_type = fn.get_function_type();
+  auto *return_type = func_type->getReturnType();
+  assert(!return_type->isVoidTy());
 
   {
     auto str = std::stringstream{};
@@ -133,6 +136,35 @@ inline value call(function_ref const& fn, llvm::ArrayRef<value> args) {
   auto ret = mb.ir_builder().CreateCall(fn, values);
   return value{ret, fmt::format("{}_ret", fn.name())};
 }
+
+inline void void_call(function_ref const& fn, llvm::ArrayRef<value> args) {
+  auto& mb = *jit_module_builder::current_builder();
+
+  llvm::FunctionType* func_type = fn.get_function_type();
+  auto *return_type = func_type->getReturnType();
+  assert(return_type->isVoidTy());
+
+  {
+    auto str = std::stringstream{};
+    str << fn.name() << "(";
+
+    for (auto &v : args) {
+      str << fmt::format("{}, ", v);
+    }
+
+    str << ");";
+    auto line_no = mb.source_code_.add_line(str.str());
+    mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
+  }
+
+  auto values = std::vector<llvm::Value*>{};
+  for (auto &v : args) {
+    values.emplace_back(v.eval());
+  }
+
+  mb.ir_builder().CreateCall(fn, values);
+}
+
 
 inline auto load(value ptr) {
   auto *elem_type = ptr.get_type()->getPointerElementType();
