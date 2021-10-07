@@ -161,6 +161,7 @@ inline function_ref jit_module_builder::end_creating_function() {
 
   mb.source_code_.leave_function_scope();
   function_ref fn_ref = function_ref{current_function_name_, mb.current_function()};
+  mb.current_function() = nullptr;
   fn_ref.set_function_attribute({"target-cpu", llvm::sys::getHostCPUName()});
   return fn_ref;
 }
