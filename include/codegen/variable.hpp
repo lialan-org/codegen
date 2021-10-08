@@ -97,7 +97,7 @@ public:
   }
 
   void set(value const& v) {
-    assert(v.get_type() == this->get_type());
+    //assert(v.get_type() == this->get_type());
     auto& mb = *jit_module_builder::current_builder();
     auto line_no = mb.source_code_.add_line(fmt::format("{} = {};", name_, v));
     mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));

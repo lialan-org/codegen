@@ -195,15 +195,14 @@ inline void store(value v, value ptr) {
   mb.ir_builder().CreateAlignedStore(v.eval(), ptr.eval(), llvm::MaybeAlign());
 }
 
-template<typename BodyLambda>
-inline void while_(value cnd_fn, BodyLambda && bdy) {
+template<typename CondLambda, typename BodyLambda>
+inline void while_(CondLambda cnd_fn, BodyLambda && bdy) {
   auto& mb = *jit_module_builder::current_builder();
 
-  assert(cnd_fn.isBoolType());
+  //assert(cnd_fn.isBoolType());
 
   auto line_no = mb.source_code_.current_line() + 1;
   mb.ir_builder().SetCurrentDebugLocation(mb.get_debug_location(line_no));
-  mb.source_code_.add_line(fmt::format("while ({}) {{", cnd_fn));
 
   auto while_continue = llvm::BasicBlock::Create(mb.context(), "while_continue", mb.current_function());
   auto while_iteration = llvm::BasicBlock::Create(mb.context(), "while_iteration");
@@ -214,7 +213,9 @@ inline void while_(value cnd_fn, BodyLambda && bdy) {
   mb.ir_builder().CreateBr(while_continue);
   mb.ir_builder().SetInsertPoint(while_continue);
 
-  mb.ir_builder().CreateCondBr(cnd_fn.eval(), while_iteration, while_break);
+  auto cond = cnd_fn();
+  mb.ir_builder().CreateCondBr(cond, while_iteration, while_break);
+  mb.source_code_.add_line(fmt::format("while ({}) {{", cond));
 
   mb.source_code_.enter_scope();
 
