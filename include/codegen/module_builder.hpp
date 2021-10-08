@@ -214,11 +214,6 @@ public:
     return std::make_unique<codegen::module>(std::move(compiler_->lljit_), compiler_->mangle_);
   }
 
-  [[nodiscard]] class module build() && {
-
-    return codegen::module{std::move(compiler_->lljit_), compiler_->mangle_};
-  }
-
   friend std::ostream& operator<<(std::ostream& os, jit_module_builder const& mb) {
     auto llvm_os = llvm::raw_os_ostream(os);
     mb.module_->print(llvm_os, nullptr);
