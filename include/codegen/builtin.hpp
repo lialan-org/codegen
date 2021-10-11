@@ -53,6 +53,23 @@ inline value bitcast(value src) {
   return value{casted_value, src.get_name() + "_casted"}; 
 }
 
+
+inline value gep(value src, size_t index) {
+  using namespace llvm;
+  assert(src.get_type()->isPointerTy());
+  Type* elem_type = src.get_type()->getPointerElementType();
+
+  auto &mb = *jit_module_builder::current_builder();
+  auto &builder = mb.ir_builder();
+  auto &context = builder.getContext();
+
+  auto c_index = ConstantInt::get(context, llvm::APInt(64, index));
+
+  auto * gep_inst = GetElementPtrInst::CreateInBounds(src, {c_index});
+
+  return value{gep_inst, src.get_name() + "_" + std::to_string(index)};
+}
+
 inline void memcpy(value dst, value src, value n) {
   assert(n.isIntegerType());
 
