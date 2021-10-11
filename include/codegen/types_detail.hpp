@@ -26,6 +26,17 @@ struct type_reverse_lookup {
     if constexpr (std::is_same_v<T, int32_t>()) {
       return builder.getInt32Ty();
     }
+
+    // TODO: better support for aggregated types.
+    if constexpr (std::is_same_v<T, int32_t*>()) {
+      return llvm::PointerType::getUnqual(builder.getInt32Ty());
+    }
+    if constexpr (std::is_same_v<T, int64_t*>()) {
+      return llvm::PointerType::getUnqual(builder.getInt64Ty());
+    }
+    if constexpr (std::is_same_v<T, bool*>()) {
+      return llvm::PointerType::getUnqual(builder.getInt1Ty());
+    }
     llvm_unreachable("unimplemented");
   }
 
