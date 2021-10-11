@@ -23,12 +23,35 @@
 #pragma once
 
 #include "codegen/module_builder.hpp"
-
-#include "types.hpp"
+#include "codegen/types.hpp"
 
 namespace codegen::builtin {
 
 using namespace codegen;
+
+[[maybe_unused]]
+inline static void register_printf(llvm::LLVMContext &context, llvm::Module &module) {
+    using namespace llvm;
+    std::vector<Type*> args;
+    args.push_back (Type::getInt8PtrTy (context));
+    /*`true` specifies the function as variadic*/
+    FunctionType* printfType = FunctionType::get (llvm::Type::getInt32Ty (context), args, true);
+    Function::Create (printfType, Function::ExternalLinkage, "printf", module);
+}
+
+template<typename T>
+inline value bitcast(value src) {
+  llvm::Type* target_type = detail::type_reverse_lookup::type<T>();
+  llvm::Type* original_type = src.get_type();
+
+  if (target_type == original_type) {
+    return src;
+  }
+
+  auto& mb = *jit_module_builder::current_builder();
+  auto casted_value = mb.ir_builder().CreateBitCast(src.eval(), target_type);
+  return value{casted_value, src.get_name() + "_casted"}; 
+}
 
 inline void memcpy(value dst, value src, value n) {
   assert(n.isIntegerType());

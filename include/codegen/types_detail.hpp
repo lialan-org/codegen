@@ -14,6 +14,21 @@ template<class T, template<class> class U> struct is_instance<U<T>, U> : public 
 // an easy lookup table for JIT debugging.
 struct type_reverse_lookup {
 
+  template<typename T>
+  static llvm::Type* type() {
+    auto &builder = codegen::jit_module_builder::current_builder()->ir_builder();
+    if constexpr (std::is_same_v<T, bool>()) {
+      return builder.getInt1Ty();
+    }
+    if constexpr (std::is_same_v<T, int64_t>()) {
+      return builder.getInt64Ty();
+    }
+    if constexpr (std::is_same_v<T, int32_t>()) {
+      return builder.getInt32Ty();
+    }
+    llvm_unreachable("unimplemented");
+  }
+
   static std::string name(llvm::Type *type) {
     if (type->isVoidTy()) {
       return "void";
