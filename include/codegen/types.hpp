@@ -17,7 +17,10 @@ namespace codegen::detail {
 struct type_reverse_lookup {
   template<typename T>
   static inline llvm::Type* type() {
+    using namespace llvm;
+    
     auto &builder = jit_module_builder::current_builder()->ir_builder();
+    auto &context = builder.getContext();
 
     if constexpr (std::is_same_v<T, bool>) {
       return builder.getInt1Ty();
@@ -27,6 +30,14 @@ struct type_reverse_lookup {
       return builder.getInt64Ty();
     } else if constexpr (std::is_same_v<T, float>) {
       return builder.getFloatTy();
+    } else if constexpr (std::is_same_v<T, bool*>) {
+      return PointerType::getInt1PtrTy(context);
+    } else if constexpr (std::is_same_v<T, int32_t*>) {
+      return PointerType::getInt32PtrTy(context);
+    } else if constexpr (std::is_same_v<T, int64_t*>) {
+      return PointerType::getInt64PtrTy(context);
+    } else if constexpr (std::is_same_v<T, float*>) {
+      return PointerType::getFloatPtrTy(context);
     } else {
       llvm_unreachable("unimplemented");
     }
@@ -43,6 +54,10 @@ struct type_reverse_lookup {
       return fmt::format("s{}", bitwidth);
     }else if (type->isFloatTy()) {
       return "f32";
+    } else if (type->isPointerTy()) {
+      llvm::PointerType * ptr_type = dyn_cast<llvm::PointerType>(type);
+      llvm::Type *elem_type = ptr_type->getElementType();
+      return "*" + name(elem_type);
     } else {
       llvm_unreachable("unimplemented");
     }
@@ -65,6 +80,23 @@ struct type_reverse_lookup {
     } else if (type->isFloatTy()) {
       return jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
                                                                                          llvm::dwarf::DW_ATE_float);
+    } else if (type->isPointerTy()) {
+      llvm::PointerType * ptr_type = dyn_cast<llvm::PointerType>(type);
+      llvm::Type *elem_type = ptr_type->getElementType();
+      assert(elem_type->isSized());
+
+      return jit_module_builder::current_builder()->debug_builder().createPointerType(dbg(elem_type), getTypeSize(elem_type));
+    } else {
+      llvm_unreachable("unimplemented");
+    }
+  }
+
+  // data size are dependent on target data layout.
+  static inline llvm::TypeSize getTypeSize(llvm::Type * type) {
+    auto &module =  jit_module_builder::current_builder()->module();
+
+    if (type->isIntegerTy() || type->isFloatTy() || type->isPointerTy()) {
+      return module.getDataLayout().getTypeAllocSizeInBits(type);
     } else {
       llvm_unreachable("unimplemented");
     }
