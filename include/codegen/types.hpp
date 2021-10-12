@@ -16,7 +16,7 @@ namespace codegen::detail {
 // 3. need to store intemediary results.
 struct type_reverse_lookup {
   template<typename T>
-  static llvm::Type* type() {
+  static inline llvm::Type* type() {
     auto &builder = jit_module_builder::current_builder()->ir_builder();
 
     if constexpr (std::is_same_v<T, bool>) {
@@ -33,7 +33,7 @@ struct type_reverse_lookup {
 
   }
 
-  static std::string name(llvm::Type *type) {
+  static inline std::string name(llvm::Type *type) {
     if (type->isVoidTy()) {
       return "void";
     } else if (type->isIntegerTy(1)) {
@@ -48,7 +48,7 @@ struct type_reverse_lookup {
     }
   }
 
-  static llvm::DIType* dbg(llvm::Type* type)  {
+  static inline llvm::DIType* dbg(llvm::Type* type)  {
     std::string ty_name = type_reverse_lookup::name(type);
     if (type->isVoidTy()) {
       return nullptr;      

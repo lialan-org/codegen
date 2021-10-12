@@ -51,6 +51,7 @@ add_library(codegen
   src/module_builder.cpp
   src/builtins.cpp
   src/operations.cpp
+  src/statements.cpp
 )
 
 target_include_directories(codegen PUBLIC
