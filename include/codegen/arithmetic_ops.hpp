@@ -23,7 +23,7 @@
 #pragma once
 
 #include "codegen/module_builder.hpp"
-#include "types.hpp"
+#include "codegen/types.hpp"
 
 namespace codegen {
 
@@ -67,12 +67,14 @@ enum class pointer_arithmetic_operation_type {
   sub,
 };
 
-template<pointer_arithmetic_operation_type Op> class pointer_arithmetic_operation {
+class pointer_arithmetic_operations {
+  pointer_arithmetic_operation_type op_;
   value lhs_;
   value rhs_;
 
 public:
-  pointer_arithmetic_operation(value lhs, value rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
+  pointer_arithmetic_operations(pointer_arithmetic_operation_type op, value lhs, value rhs)
+      : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
     assert(lhs_.isPointerType());
     // TODO: more types
     assert(rhs_.isIntegerType() || rhs_.isPointerType() || rhs_.isFloatType());
@@ -104,63 +106,52 @@ public:
     */
   }
 
-  friend std::ostream& operator<<(std::ostream& os, pointer_arithmetic_operation const& ao) {
-    auto symbol = [] {
-      switch (Op) {
-      case pointer_arithmetic_operation_type::add: return '+';
-      case pointer_arithmetic_operation_type::sub: return '-';
-      }
-    }();
-    return os << '(' << ao.lhs_ << ' ' << symbol << ' ' << ao.rhs_ << ')';
-  }
+  friend std::ostream& operator<<(std::ostream& os, pointer_arithmetic_operations const& ao);
 };
+
 
 } // namespace detail
 
 // TODO: add unsigned operations.
 
-inline value operator+(value lhs, value rhs) {
-  return detail::arithmetic_operations(detail::arithmetic_operation_type::add, std::move(lhs), std::move(rhs)).gen_value();
+value operator+(value lhs, value rhs) {
+  if (lhs.isPointerType()) {
+    return detail::pointer_arithmetic_operations(detail::pointer_arithmetic_operation_type::add, std::move(lhs), std::move(rhs)).gen_value();
+  } else {
+    return detail::arithmetic_operations(detail::arithmetic_operation_type::add, std::move(lhs), std::move(rhs)).gen_value();
+  }
 }
 
-inline value operator-(value lhs, value rhs) {
-  return detail::arithmetic_operations(detail::arithmetic_operation_type::sub, std::move(lhs), std::move(rhs)).gen_value();
+value operator-(value lhs, value rhs) {
+  if (lhs.isPointerType()) {
+    return detail::pointer_arithmetic_operations(detail::pointer_arithmetic_operation_type::sub, std::move(lhs), std::move(rhs)).gen_value();
+  } else {
+    return detail::arithmetic_operations(detail::arithmetic_operation_type::sub, std::move(lhs), std::move(rhs)).gen_value();
+  }
 }
 
-inline value operator*(value lhs, value rhs) {
+value operator*(value lhs, value rhs) {
   return detail::arithmetic_operations(detail::arithmetic_operation_type::mul, std::move(lhs), std::move(rhs)).gen_value();
 }
 
-inline value operator/(value lhs, value rhs) {
+value operator/(value lhs, value rhs) {
   return detail::arithmetic_operations(detail::arithmetic_operation_type::sdiv, std::move(lhs), std::move(rhs)).gen_value();
 }
 
-inline value operator%(value lhs, value rhs) {
+value operator%(value lhs, value rhs) {
   return detail::arithmetic_operations(detail::arithmetic_operation_type::umod, std::move(lhs), std::move(rhs)).gen_value();
 }
 
-inline value operator&(value lhs, value rhs) {
+value operator&(value lhs, value rhs) {
   return detail::arithmetic_operations(detail::arithmetic_operation_type::and_, std::move(lhs), std::move(rhs)).gen_value();
 }
 
-inline value operator|(value lhs, value rhs) {
+value operator|(value lhs, value rhs) {
   return detail::arithmetic_operations(detail::arithmetic_operation_type::or_, std::move(lhs), std::move(rhs)).gen_value();
 }
 
-inline value operator^(value lhs, value rhs) {
+value operator^(value lhs, value rhs) {
   return detail::arithmetic_operations(detail::arithmetic_operation_type::xor_, std::move(lhs), std::move(rhs)).gen_value();
 }
-
-/*
-template<PointerValue LHS, IntegralValue RHS> auto operator+(LHS lhs, RHS rhs) {
-  return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::add, LHS, RHS>(std::move(lhs),
-                                                                                                        std::move(rhs));
-}
-
-template<PointerValue LHS, IntegralValue RHS> auto operator-(LHS lhs, RHS rhs) {
-  return detail::pointer_arithmetic_operation<detail::pointer_arithmetic_operation_type::sub, LHS, RHS>(std::move(lhs),
-                                                                                                        std::move(rhs));
-}
-*/
 
 } // namespace codegen

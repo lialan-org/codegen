@@ -41,12 +41,14 @@ enum class relational_operation_type {
   ult,
 };
 
-template<relational_operation_type Op> class relational_operation {
+class relational_operations {
+  relational_operation_type op_;
   value lhs_;
   value rhs_;
 
 public:
-  relational_operation(value lhs, value rhs) : lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
+  relational_operations(relational_operation_type op, value lhs, value rhs)
+      : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
     assert(lhs_.get_type() == rhs_.get_type());
     // TODO: check relational types.
   }
@@ -56,96 +58,36 @@ public:
     return value{val, fmt::format("{}", *this)};
   }
 
-  llvm::Value* eval() const {
-    if (lhs_.isIntegerType()) {
-      switch (Op) {
-      case relational_operation_type::eq:
-        return jit_module_builder::current_builder()->ir_builder().CreateICmpEQ(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ne:
-        return jit_module_builder::current_builder()->ir_builder().CreateICmpNE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::sge:
-          return jit_module_builder::current_builder()->ir_builder().CreateICmpSGE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::uge:
-          return jit_module_builder::current_builder()->ir_builder().CreateICmpUGE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::sgt:
-          return jit_module_builder::current_builder()->ir_builder().CreateICmpSGT(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ugt:
-          return jit_module_builder::current_builder()->ir_builder().CreateICmpUGT(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::sle:
-          return jit_module_builder::current_builder()->ir_builder().CreateICmpSLE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ule:
-          return jit_module_builder::current_builder()->ir_builder().CreateICmpULE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::slt:
-          return jit_module_builder::current_builder()->ir_builder().CreateICmpSLT(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ult:
-          return jit_module_builder::current_builder()->ir_builder().CreateICmpULT(lhs_.eval(), rhs_.eval());
-      }
-    } else if (lhs_.isFloatType()) {
-      switch (Op) {
-      case relational_operation_type::eq:
-        return jit_module_builder::current_builder()->ir_builder().CreateFCmpOEQ(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::ne:
-        return jit_module_builder::current_builder()->ir_builder().CreateFCmpONE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::sge:
-        return jit_module_builder::current_builder()->ir_builder().CreateFCmpOGE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::sgt:
-        return jit_module_builder::current_builder()->ir_builder().CreateFCmpOGT(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::sle:
-        return jit_module_builder::current_builder()->ir_builder().CreateFCmpOLE(lhs_.eval(), rhs_.eval());
-      case relational_operation_type::slt:
-        return jit_module_builder::current_builder()->ir_builder().CreateFCmpOLT(lhs_.eval(), rhs_.eval());
-      default:
-        llvm_unreachable("unsupported pointer arithmetic");
-      }
-    } else {
-      llvm_unreachable("unimplemented");
-    }
-  }
+  llvm::Value* eval() const;
 
-  friend std::ostream& operator<<(std::ostream& os, relational_operation const& ro) {
-    auto symbol = [] {
-      switch (Op) {
-      case relational_operation_type::eq: return "==";
-      case relational_operation_type::ne: return "!=";
-      case relational_operation_type::sge: return "(s)>=";
-      case relational_operation_type::uge: return "(u)>=";
-      case relational_operation_type::sgt: return "(s)>";
-      case relational_operation_type::ugt: return "(u)>";
-      case relational_operation_type::sle: return "(s)<=";
-      case relational_operation_type::ule: return "(u)<=";
-      case relational_operation_type::slt: return "(s)<";
-      case relational_operation_type::ult: return "(u)<";
-      }
-    }();
-    return os << '(' << ro.lhs_ << ' ' << symbol << ' ' << ro.rhs_ << ')';
-  }
+  friend std::ostream& operator<<(std::ostream& os, relational_operations const& ro);
 };
 
 } // namespace detail
 
 // TODO: support unsigned operations.
 inline value operator==(value lhs, value rhs) {
-  return detail::relational_operation<detail::relational_operation_type::eq>(std::move(lhs), std::move(rhs)).gen_value();
+  return detail::relational_operations(detail::relational_operation_type::eq, std::move(lhs), std::move(rhs)).gen_value();
 }
 
 inline value operator!=(value lhs, value rhs) {
-  return detail::relational_operation<detail::relational_operation_type::ne>(std::move(lhs), std::move(rhs)).gen_value();
+  return detail::relational_operations(detail::relational_operation_type::ne, std::move(lhs), std::move(rhs)).gen_value();
 }
 
 inline value operator>=(value lhs, value rhs) {
-  return detail::relational_operation<detail::relational_operation_type::sge>(std::move(lhs), std::move(rhs)).gen_value();
+  return detail::relational_operations(detail::relational_operation_type::sge, std::move(lhs), std::move(rhs)).gen_value();
 }
 
 inline value operator>(value lhs, value rhs) {
-  return detail::relational_operation<detail::relational_operation_type::sgt>(std::move(lhs), std::move(rhs)).gen_value();
+  return detail::relational_operations(detail::relational_operation_type::sgt, std::move(lhs), std::move(rhs)).gen_value();
 }
 
 inline value operator<=(value lhs, value rhs) {
-  return detail::relational_operation<detail::relational_operation_type::sle>(std::move(lhs), std::move(rhs)).gen_value();
+  return detail::relational_operations(detail::relational_operation_type::sle, std::move(lhs), std::move(rhs)).gen_value();
 }
 
 inline value operator<(value lhs, value rhs) {
-  return detail::relational_operation<detail::relational_operation_type::slt>(std::move(lhs), std::move(rhs)).gen_value();
+  return detail::relational_operations(detail::relational_operation_type::slt, std::move(lhs), std::move(rhs)).gen_value();
 }
 
 } // namespace codegen
