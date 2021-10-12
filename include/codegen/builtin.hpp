@@ -34,7 +34,7 @@ void register_printf(llvm::LLVMContext &context, llvm::Module &module);
 
 template<typename T>
 inline value bitcast(value src) {
-  llvm::Type* target_type = detail::type_reverse_lookup::type<T>();
+  llvm::Type* target_type = codegen::detail::type_reverse_lookup::type<T>();
   llvm::Type* original_type = src.get_type();
 
   if (target_type == original_type) {

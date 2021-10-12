@@ -49,6 +49,8 @@ find_package(fmt REQUIRED)
 add_library(codegen 
   src/value.cpp
   src/module_builder.cpp
+  src/builtins.cpp
+  src/operations.cpp
 )
 
 target_include_directories(codegen PUBLIC

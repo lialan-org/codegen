@@ -2,6 +2,7 @@
 
 #include "codegen/module_builder.hpp"
 #include "codegen/value.hpp"
+#include "codegen/types.hpp"
 
 #include <sstream>
 
@@ -14,6 +15,24 @@ namespace codegen::detail {
 // 2. do codegen incrementally
 // 3. need to store intemediary results.
 struct type_reverse_lookup {
+  template<typename T>
+  static llvm::Type* type() {
+    auto &builder = jit_module_builder::current_builder()->ir_builder();
+
+    if constexpr (std::is_same_v<T, bool>) {
+      return builder.getInt1Ty();
+    } else if constexpr (std::is_same_v<T, int32_t>) {
+      return builder.getInt32Ty();
+    } else if constexpr (std::is_same_v<T, int64_t>) {
+      return builder.getInt64Ty();
+    } else if constexpr (std::is_same_v<T, float>) {
+      return builder.getFloatTy();
+    } else {
+      llvm_unreachable("unimplemented");
+    }
+
+  }
+
   static std::string name(llvm::Type *type) {
     if (type->isVoidTy()) {
       return "void";
