@@ -47,6 +47,8 @@ class arithmetic_operations {
   value lhs_;
   value rhs_;
 
+  llvm::Value* eval() const;
+
 public:
   arithmetic_operations(arithmetic_operation_type op, value lhs, value rhs) : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
     assert(lhs_.get_type() == rhs_.get_type());
@@ -56,8 +58,6 @@ public:
     auto *val = eval();
     return value{val, fmt::format("{}", *this)};
   }
-
-  llvm::Value* eval() const;
 
   friend std::ostream& operator<<(std::ostream& os, arithmetic_operations const& ao);
 };
@@ -71,19 +71,6 @@ class pointer_arithmetic_operations {
   pointer_arithmetic_operation_type op_;
   value lhs_;
   value rhs_;
-
-public:
-  pointer_arithmetic_operations(pointer_arithmetic_operation_type op, value lhs, value rhs)
-      : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
-    assert(lhs_.isPointerType());
-    // TODO: more types
-    assert(rhs_.isIntegerType() || rhs_.isPointerType() || rhs_.isFloatType());
-  }
-
-  value gen_value() {
-    auto *val = eval();
-    return value{val, fmt::format("{}", *this)};
-  }
 
   llvm::Value* eval() const {
     llvm_unreachable("unimplemented");
@@ -104,6 +91,19 @@ public:
     }
     abort();
     */
+  }
+
+public:
+  pointer_arithmetic_operations(pointer_arithmetic_operation_type op, value lhs, value rhs)
+      : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
+    assert(lhs_.isPointerType());
+    // TODO: more types
+    assert(rhs_.isIntegerType() || rhs_.isPointerType() || rhs_.isFloatType());
+  }
+
+  value gen_value() {
+    auto *val = eval();
+    return value{val, fmt::format("{}", *this)};
   }
 
   friend std::ostream& operator<<(std::ostream& os, pointer_arithmetic_operations const& ao);

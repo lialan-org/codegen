@@ -46,6 +46,8 @@ class relational_operations {
   value lhs_;
   value rhs_;
 
+  llvm::Value* eval() const;
+
 public:
   relational_operations(relational_operation_type op, value lhs, value rhs)
       : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
@@ -57,8 +59,6 @@ public:
     auto *val = eval();
     return value{val, fmt::format("{}", *this)};
   }
-
-  llvm::Value* eval() const;
 
   friend std::ostream& operator<<(std::ostream& os, relational_operations const& ro);
 };

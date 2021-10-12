@@ -31,6 +31,9 @@ class variable : public value {
   explicit variable(std::string const& n, llvm::Type *llvm_type);
 
 public:
+  // variables cannot copy
+  variable(const variable &) = delete;
+
   template<int size>
   static variable variable_integer(std::string const &n) {
     auto& mb = *jit_module_builder::current_builder();

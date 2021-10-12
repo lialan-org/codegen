@@ -50,7 +50,7 @@ public:
   bool isSignedIntegerType() const { }
   */
 
-  bool isPointerElementType() const {
+  bool getPointerElementType() const {
     assert(isPointerType());
     llvm::PointerType * ptr_type = llvm::dyn_cast<llvm::PointerType>(get_type());
     return ptr_type->getElementType();

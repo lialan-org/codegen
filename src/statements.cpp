@@ -183,6 +183,7 @@ void void_call(function_ref const& fn, llvm::ArrayRef<value> args) {
 }
 
 auto load(value ptr) {
+  assert(ptr.get_type()->isPointerTy());
   auto *elem_type = ptr.get_type()->getPointerElementType();
 
   auto& mb = *jit_module_builder::current_builder();
