@@ -26,6 +26,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <filesystem>
 
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/DebugInfoMetadata.h>
@@ -198,27 +199,7 @@ public:
   void begin_creating_function(std::string const& name, llvm::FunctionType* func_type);
   function_ref end_creating_function();
 
-  [[nodiscard]] std::unique_ptr<codegen::module> build_ptr() && {
-    {
-      auto ofs = std::ofstream(source_code_.source_file(), std::ios::trunc);
-      ofs << source_code_.get();
-    }
-    source_code_.debug_builder().finalize();
-
-    if (compiler_->compileModule(std::move(module_), std::move(context_))) {
-      // TODO: clean up module builder.
-    } else {
-      // llvm_unreachable("Failed to compile"); // TODO: more error messages.
-    }
-
-    return std::make_unique<codegen::module>(std::move(compiler_->lljit_), compiler_->mangle_);
-  }
-
-  friend std::ostream& operator<<(std::ostream& os, jit_module_builder const& mb) {
-    auto llvm_os = llvm::raw_os_ostream(os);
-    mb.module_->print(llvm_os, nullptr);
-    return os;
-  }
+  [[nodiscard]] std::unique_ptr<codegen::module> build_ptr() &&;
 
 private:
   void declare_external_symbol(std::string const& name, void* address) { compiler_->add_symbol(name, address); }

@@ -27,50 +27,6 @@
 
 namespace codegen {
 
-// We have another flavor of wrappers inside codegen::jit namespace. 
-// IT does not take template arguments because we need to:
-// 1. run it at runtime 
-// 2. do codegen incrementally
-// 3. need to store intemediary results.
-struct type_reverse_lookup {
-  static std::string name(llvm::Type *type) {
-    if (type->isVoidTy()) {
-      return "void";
-    } else if (type->isIntegerTy(1)) {
-      return "bool";
-    } else if (type->isIntegerTy()) {
-      int32_t bitwidth = type->getIntegerBitWidth();
-      return fmt::format("s{}", bitwidth);
-    }else if (type->isFloatTy()) {
-      return "f32";
-    } else {
-      llvm_unreachable("unimplemented");
-    }
-  }
-
-  static llvm::DIType* dbg(llvm::Type* type)  {
-    std::string ty_name = type_reverse_lookup::name(type);
-    if (type->isVoidTy()) {
-      return nullptr;      
-    } else if (type->isIntegerTy(1)) {
-      // bool type
-      return jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 8,
-                                                                                         llvm::dwarf::DW_ATE_boolean);
-    } else if (type->isIntegerTy()) {
-      assert(!type->isIntegerTy(1));
-      // TODO: implement unsigned
-      return jit_module_builder::current_builder()->debug_builder().createBasicType(
-        ty_name, type->getIntegerBitWidth(), llvm::dwarf::DW_ATE_signed);
-
-    } else if (type->isFloatTy()) {
-      return jit_module_builder::current_builder()->debug_builder().createBasicType(ty_name, 32,
-                                                                                         llvm::dwarf::DW_ATE_float);
-    } else {
-      llvm_unreachable("unimplemented");
-    }
-  }
-};
-
 class variable : public value {
   explicit variable(std::string const& n, llvm::Type *llvm_type) : value(nullptr, n) {
     auto& mb = *jit_module_builder::current_builder();

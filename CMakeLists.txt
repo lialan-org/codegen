@@ -46,14 +46,17 @@ endif()
 find_package(LLVM 12 REQUIRED)
 find_package(fmt REQUIRED)
 
-add_library(codegen INTERFACE)
+add_library(codegen 
+  src/value.cpp
+  src/module_builder.cpp
+)
 
-target_include_directories(codegen INTERFACE
+target_include_directories(codegen PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
   ${LLVM_INCLUDE_DIRS}
 )
 
-target_compile_features(codegen INTERFACE cxx_std_20)
+target_compile_features(codegen PUBLIC cxx_std_20)
 target_link_libraries(codegen INTERFACE ${CODEGEN_CXX_FLAGS})
 target_compile_options(codegen INTERFACE ${CODEGEN_CXX_FLAGS})
 target_link_libraries(codegen INTERFACE
