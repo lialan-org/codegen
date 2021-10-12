@@ -47,9 +47,8 @@ llvm::Value* arithmetic_operations::eval() const {
     case arithmetic_operation_type::or_: [[fallthrough]];
     case arithmetic_operation_type::xor_: abort();
     }
-  } else {
-    llvm_unreachable("unimplemented");
   }
+  abort();
 }
 
 std::ostream& operator<<(std::ostream& os, arithmetic_operations const& ao) {
@@ -66,6 +65,7 @@ std::ostream& operator<<(std::ostream& os, arithmetic_operations const& ao) {
     case arithmetic_operation_type::or_: return "|";
     case arithmetic_operation_type::xor_: return "^";
     }
+    abort();
   }();
   return os << '(' << ao.lhs_ << ' ' << symbol << ' ' << ao.rhs_ << ')';
 }
@@ -75,6 +75,7 @@ std::ostream& operator<<(std::ostream& os, pointer_arithmetic_operations const& 
     switch (ao.op_) {
     case pointer_arithmetic_operation_type::add: return '+';
     case pointer_arithmetic_operation_type::sub: return '-';
+    default: assert(false); break;
     }
   }();
   return os << '(' << ao.lhs_ << ' ' << symbol << ' ' << ao.rhs_ << ')';
@@ -121,9 +122,8 @@ llvm::Value* relational_operations::eval() const {
     default:
       llvm_unreachable("unsupported pointer arithmetic");
     }
-  } else {
-    llvm_unreachable("unimplemented");
   }
+  abort();
 }
 
 std::ostream& operator<<(std::ostream& os, relational_operations const& ro) {
@@ -140,6 +140,7 @@ std::ostream& operator<<(std::ostream& os, relational_operations const& ro) {
     case relational_operation_type::slt: return "(s)<";
     case relational_operation_type::ult: return "(u)<";
     }
+    abort();
   }();
   return os << '(' << ro.lhs_ << ' ' << symbol << ' ' << ro.rhs_ << ')';
 }

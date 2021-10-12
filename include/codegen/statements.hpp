@@ -59,6 +59,6 @@ inline value false_() {
 
 void return_();
 
-void return_(value v);
+void return_(value v); // TODO: return multiple values
 
 } // namespace codegen

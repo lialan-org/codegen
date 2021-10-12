@@ -6,8 +6,6 @@
 
 #include <sstream>
 
-#include <concepts>
-
 namespace codegen::detail {
 // We have another flavor of wrappers inside codegen::jit namespace. 
 // IT does not take template arguments because we need to:
@@ -22,6 +20,7 @@ struct type_reverse_lookup {
     auto &builder = jit_module_builder::current_builder()->ir_builder();
     auto &context = builder.getContext();
 
+    // TODO: better utilize pointer types.
     if constexpr (std::is_same_v<T, bool>) {
       return builder.getInt1Ty();
     } else if constexpr (std::is_same_v<T, int32_t>) {
